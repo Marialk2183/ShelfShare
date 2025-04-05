@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary colors -->
+    <color name="primary">#8B4513</color>
+    <color name="primary_dark">#800000</color>
+    <color name="primary_light">#A0522D</color>
+    
+    <!-- Accent colors -->
+    <color name="accent">#556B2F</color>
+    <color name="accent_dark">#3B4A1F</color>
+    <color name="accent_light">#6B8E23</color>
+    
+    <!-- Background colors -->
+    <color name="background">#F5F5DC</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="error">#B00020</color>
+    
+    <!-- Text colors -->
+    <color name="text_primary">#8B4513</color>
+    <color name="text_secondary">#800000</color>
+    
+    <!-- Basic colors -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    
+    <!-- Component colors -->
+    <color name="card_background">#FFFFFF</color>
+    <color name="card_stroke">#1A8B4513</color>
+    <color name="ripple">#1A8B4513</color>
+    <color name="divider">#1A8B4513</color>
+    
+    <!-- System colors -->
+    <color name="status_bar">#800000</color>
+    <color name="navigation_bar">#8B4513</color>
+</resources>
