@@ -71,9 +71,9 @@ public class BookAdapter extends ListAdapter<Book, BookAdapter.BookViewHolder> {
             tvPrice = itemView.findViewById(R.id.tvPrice);
             tvLocation = itemView.findViewById(R.id.tvLocation);
             ratingBar = itemView.findViewById(R.id.ratingBar);
-            btnFavorite = itemView.findViewById(R.id.btnFavorite);
+            btnFavorite = itemView.findViewById(R.id.btnFavorites);
 
-            itemView.findViewById(R.id.btnAddToCart).setOnClickListener(v -> {
+            itemView.findViewById(R.id.btnRent).setOnClickListener(v -> {
                 int position = getAdapterPosition();
                 if (position != RecyclerView.NO_POSITION) {
                     Book book = getItem(position);
