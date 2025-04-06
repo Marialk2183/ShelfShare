@@ -1,7 +1,12 @@
 package com.example.shelfshare.data;
 
 import androidx.lifecycle.LiveData;
-import androidx.room.*;
+import androidx.room.Dao;
+import androidx.room.Delete;
+import androidx.room.Insert;
+import androidx.room.Query;
+import androidx.room.Update;
+
 import java.util.List;
 
 @Dao
@@ -9,16 +14,16 @@ public interface BookDao {
     @Query("SELECT * FROM books")
     LiveData<List<BookEntity>> getAllBooks();
 
-    @Query("SELECT * FROM books WHERE isAvailable = 1")
+    @Query("SELECT * FROM books WHERE available = 1")
     LiveData<List<BookEntity>> getAvailableBooks();
 
     @Query("SELECT * FROM books WHERE isFavorite = 1")
     LiveData<List<BookEntity>> getFavoriteBooks();
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert
     void insert(BookEntity book);
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert
     void insertAll(List<BookEntity> books);
 
     @Update

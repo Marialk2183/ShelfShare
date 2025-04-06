@@ -12,6 +12,9 @@ public class SettingsViewModel extends ViewModel {
     private final MutableLiveData<String> error = new MutableLiveData<>();
     private final MutableLiveData<Boolean> logoutSuccess = new MutableLiveData<>(false);
     private final FirebaseAuth auth;
+    private final MutableLiveData<Boolean> notificationsEnabled = new MutableLiveData<>(true);
+    private final MutableLiveData<Boolean> darkModeEnabled = new MutableLiveData<>(false);
+    private final MutableLiveData<String> appVersion = new MutableLiveData<>("1.0.0");
 
     public SettingsViewModel() {
         auth = FirebaseAuth.getInstance();
@@ -59,5 +62,32 @@ public class SettingsViewModel extends ViewModel {
             error.setValue("No user logged in");
             isLoading.setValue(false);
         }
+    }
+
+    public void loadSettings() {
+        // Load settings from SharedPreferences or other storage
+        // For now, we'll just use the default values
+    }
+
+    public void setNotificationsEnabled(boolean enabled) {
+        notificationsEnabled.setValue(enabled);
+        // Save to SharedPreferences or other storage
+    }
+
+    public void setDarkModeEnabled(boolean enabled) {
+        darkModeEnabled.setValue(enabled);
+        // Save to SharedPreferences or other storage
+    }
+
+    public LiveData<Boolean> getNotificationsEnabled() {
+        return notificationsEnabled;
+    }
+
+    public LiveData<Boolean> getDarkModeEnabled() {
+        return darkModeEnabled;
+    }
+
+    public LiveData<String> getAppVersion() {
+        return appVersion;
     }
 } 

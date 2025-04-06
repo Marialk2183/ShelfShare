@@ -3,36 +3,26 @@ package com.example.shelfshare.adapters;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.DiffUtil;
-import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
-
-import com.bumptech.glide.Glide;
 import com.example.shelfshare.R;
-import com.example.shelfshare.models.Rental;
-
+import com.example.shelfshare.data.Rental;
 import java.text.SimpleDateFormat;
+import java.util.List;
 import java.util.Locale;
 
-public class RentalAdapter extends ListAdapter<Rental, RentalAdapter.RentalViewHolder> {
+public class RentalAdapter extends RecyclerView.Adapter<RentalAdapter.RentalViewHolder> {
+    private List<Rental> rentals;
     private final OnRentalClickListener listener;
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
 
-    public RentalAdapter(OnRentalClickListener listener) {
-        super(new DiffUtil.ItemCallback<Rental>() {
-            @Override
-            public boolean areItemsTheSame(@NonNull Rental oldItem, @NonNull Rental newItem) {
-                return oldItem.getId().equals(newItem.getId());
-            }
+    public interface OnRentalClickListener {
+        void onRentalClick(Rental rental);
+    }
 
-            @Override
-            public boolean areContentsTheSame(@NonNull Rental oldItem, @NonNull Rental newItem) {
-                return oldItem.equals(newItem);
-            }
-        });
+    public RentalAdapter(List<Rental> rentals, OnRentalClickListener listener) {
+        this.rentals = rentals;
         this.listener = listener;
     }
 
@@ -46,41 +36,41 @@ public class RentalAdapter extends ListAdapter<Rental, RentalAdapter.RentalViewH
 
     @Override
     public void onBindViewHolder(@NonNull RentalViewHolder holder, int position) {
-        Rental rental = getItem(position);
-        holder.bind(rental, listener);
+        Rental rental = rentals.get(position);
+        holder.bind(rental);
     }
 
-    static class RentalViewHolder extends RecyclerView.ViewHolder {
-        private final ImageView ivBookCover;
+    @Override
+    public int getItemCount() {
+        return rentals != null ? rentals.size() : 0;
+    }
+
+    public void updateRentals(List<Rental> newRentals) {
+        this.rentals = newRentals;
+        notifyDataSetChanged();
+    }
+
+    class RentalViewHolder extends RecyclerView.ViewHolder {
         private final TextView tvBookTitle;
         private final TextView tvRentalPeriod;
-        private final TextView tvTotalAmount;
         private final TextView tvStatus;
+        private final TextView tvTotalPrice;
 
-        public RentalViewHolder(@NonNull View itemView) {
+        RentalViewHolder(@NonNull View itemView) {
             super(itemView);
-            ivBookCover = itemView.findViewById(R.id.ivBookCover);
             tvBookTitle = itemView.findViewById(R.id.tvBookTitle);
             tvRentalPeriod = itemView.findViewById(R.id.tvRentalPeriod);
-            tvTotalAmount = itemView.findViewById(R.id.tvTotalAmount);
             tvStatus = itemView.findViewById(R.id.tvStatus);
+            tvTotalPrice = itemView.findViewById(R.id.tvTotalPrice);
         }
 
-        public void bind(Rental rental, OnRentalClickListener listener) {
+        void bind(Rental rental) {
             tvBookTitle.setText(rental.getBookTitle());
-            
-            SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
-            String startDate = dateFormat.format(rental.getStartDate());
-            String endDate = dateFormat.format(rental.getEndDate());
-            tvRentalPeriod.setText(String.format("%s to %s", startDate, endDate));
-            
-            tvTotalAmount.setText(String.format("₹%.2f", rental.getTotalAmount()));
+            tvRentalPeriod.setText(String.format("%s - %s",
+                    dateFormat.format(rental.getStartDate()),
+                    dateFormat.format(rental.getEndDate())));
             tvStatus.setText(rental.getStatus());
-
-            Glide.with(itemView.getContext())
-                    .load(rental.getBookImageUrl())
-                    .placeholder(R.drawable.ic_book_placeholder)
-                    .into(ivBookCover);
+            tvTotalPrice.setText(String.format("$%.2f", rental.getTotalPrice()));
 
             itemView.setOnClickListener(v -> {
                 if (listener != null) {
@@ -88,9 +78,5 @@ public class RentalAdapter extends ListAdapter<Rental, RentalAdapter.RentalViewH
                 }
             });
         }
-    }
-
-    public interface OnRentalClickListener {
-        void onRentalClick(Rental rental);
     }
 } 

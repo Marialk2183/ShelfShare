@@ -5,145 +5,134 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.TextView;
-
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
+import android.widget.Toast;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-
-import com.bumptech.glide.Glide;
+import androidx.lifecycle.ViewModelProvider;
+import com.example.shelfshare.dialogs.ChangePasswordDialog;
+import com.example.shelfshare.databinding.ActivityUserProfileBinding;
 import com.example.shelfshare.viewmodels.UserProfileViewModel;
-import com.google.android.material.button.MaterialButton;
-import com.google.android.material.progressindicator.CircularProgressIndicator;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.textfield.TextInputEditText;
 
 public class UserProfileActivity extends AppCompatActivity {
+    private ActivityUserProfileBinding binding;
     private UserProfileViewModel viewModel;
-    private CircularProgressIndicator progressBar;
-    private ImageView ivProfile;
-    private EditText etName, etEmail, etPhone;
-    private MaterialButton btnSave, btnChangePassword;
-    private TextView tvJoinedDate;
-    private Uri selectedImageUri;
-    private ActivityResultLauncher<String> imagePickerLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_user_profile);
+        binding = ActivityUserProfileBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
-        // Initialize ViewModel
-        viewModel = new ViewModelProvider(this).get(UserProfileViewModel.class);
-
-        // Initialize views
-        initializeViews();
-        setupToolbar();
-        setupImagePicker();
-        setupClickListeners();
-        setupObservers();
-
-        // Load user data
-        viewModel.loadUserData();
-    }
-
-    private void initializeViews() {
-        progressBar = findViewById(R.id.progressBar);
-        ivProfile = findViewById(R.id.ivProfile);
-        etName = findViewById(R.id.etName);
-        etEmail = findViewById(R.id.etEmail);
-        etPhone = findViewById(R.id.etPhone);
-        btnSave = findViewById(R.id.btnSave);
-        btnChangePassword = findViewById(R.id.btnChangePassword);
-        tvJoinedDate = findViewById(R.id.tvJoinedDate);
-    }
-
-    private void setupToolbar() {
-        Toolbar toolbar = findViewById(R.id.toolbar);
+        MaterialToolbar toolbar = binding.toolbar;
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("Profile");
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle("Profile");
         }
-    }
 
-    private void setupImagePicker() {
-        imagePickerLauncher = registerForActivityResult(
-            new ActivityResultContracts.GetContent(),
-            uri -> {
-                if (uri != null) {
-                    selectedImageUri = uri;
-                    Glide.with(this)
-                        .load(uri)
-                        .circleCrop()
-                        .into(ivProfile);
-                }
-            }
-        );
-    }
+        viewModel = new ViewModelProvider(this).get(UserProfileViewModel.class);
 
-    private void setupClickListeners() {
-        ivProfile.setOnClickListener(v -> {
-            imagePickerLauncher.launch("image/*");
-        });
+        setupObservers();
+        setupClickListeners();
 
-        btnSave.setOnClickListener(v -> {
-            String name = etName.getText().toString().trim();
-            String phone = etPhone.getText().toString().trim();
-            viewModel.updateProfile(name, phone, selectedImageUri);
-        });
-
-        btnChangePassword.setOnClickListener(v -> {
-            // Show change password dialog
-            ChangePasswordDialog dialog = new ChangePasswordDialog();
-            dialog.show(getSupportFragmentManager(), "ChangePasswordDialog");
+        binding.ivProfile.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_PICK);
+            intent.setType("image/*");
+            startActivityForResult(intent, 1);
         });
     }
 
     private void setupObservers() {
         viewModel.getUser().observe(this, user -> {
             if (user != null) {
-                updateUI(user);
+                binding.etName.setText(user.getName());
+                binding.etEmail.setText(user.getEmail());
+            }
+        });
+
+        viewModel.getProfileImage().observe(this, uri -> {
+            if (uri != null) {
+                binding.ivProfile.setImageURI(uri);
             }
         });
 
         viewModel.getIsLoading().observe(this, isLoading -> {
-            progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-            btnSave.setEnabled(!isLoading);
+            binding.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+            binding.btnSave.setEnabled(!isLoading);
+            binding.btnChangePassword.setEnabled(!isLoading);
         });
 
-        viewModel.getUpdateSuccess().observe(this, success -> {
+        viewModel.getError().observe(this, error -> {
+            if (error != null && !error.isEmpty()) {
+                Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        viewModel.getSuccess().observe(this, success -> {
             if (success) {
-                // Show success message
+                Toast.makeText(this, "Profile updated successfully", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private void updateUI(FirebaseUser user) {
-        etName.setText(user.getDisplayName());
-        etEmail.setText(user.getEmail());
-        etEmail.setEnabled(false); // Email cannot be changed
+    private void setupClickListeners() {
+        binding.btnSave.setOnClickListener(v -> {
+            String name = binding.etName.getText().toString().trim();
+            String email = binding.etEmail.getText().toString().trim();
 
-        // Load profile image
-        if (user.getPhotoUrl() != null) {
-            Glide.with(this)
-                .load(user.getPhotoUrl())
-                .circleCrop()
-                .into(ivProfile);
-        }
+            if (name.isEmpty() || email.isEmpty()) {
+                Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-        // Set joined date
-        if (user.getMetadata() != null) {
-            long creationTime = user.getMetadata().getCreationTimestamp();
-            // Format and display creation time
+            viewModel.updateProfile(name, email);
+        });
+
+        binding.btnChangePassword.setOnClickListener(v -> {
+            showChangePasswordDialog();
+        });
+    }
+
+    private void showChangePasswordDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_change_password, null);
+        TextInputEditText etCurrentPassword = view.findViewById(R.id.etCurrentPassword);
+        TextInputEditText etNewPassword = view.findViewById(R.id.etNewPassword);
+        TextInputEditText etConfirmPassword = view.findViewById(R.id.etConfirmPassword);
+
+        builder.setView(view)
+            .setTitle("Change Password")
+            .setPositiveButton("Change", (dialog, which) -> {
+                String currentPassword = etCurrentPassword.getText().toString();
+                String newPassword = etNewPassword.getText().toString();
+                String confirmPassword = etConfirmPassword.getText().toString();
+
+                if (newPassword.equals(confirmPassword)) {
+                    viewModel.changePassword(currentPassword, newPassword);
+                } else {
+                    Toast.makeText(this, "New passwords do not match", Toast.LENGTH_SHORT).show();
+                }
+            })
+            .setNegativeButton("Cancel", null)
+            .show();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1 && resultCode == RESULT_OK && data != null) {
+            Uri uri = data.getData();
+            if (uri != null) {
+                viewModel.updateProfileImage(uri);
+            }
         }
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
             onBackPressed();
             return true;

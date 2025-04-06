@@ -19,9 +19,9 @@ import java.text.SimpleDateFormat;
 import java.util.Locale;
 
 public class ReturnAdapter extends ListAdapter<Rental, ReturnAdapter.ReturnViewHolder> {
-    private final OnReturnClickListener listener;
+    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
 
-    public ReturnAdapter(OnReturnClickListener listener) {
+    public ReturnAdapter() {
         super(new DiffUtil.ItemCallback<Rental>() {
             @Override
             public boolean areItemsTheSame(@NonNull Rental oldItem, @NonNull Rental newItem) {
@@ -30,10 +30,9 @@ public class ReturnAdapter extends ListAdapter<Rental, ReturnAdapter.ReturnViewH
 
             @Override
             public boolean areContentsTheSame(@NonNull Rental oldItem, @NonNull Rental newItem) {
-                return oldItem.equals(newItem);
+                return oldItem.getId().equals(newItem.getId());
             }
         });
-        this.listener = listener;
     }
 
     @NonNull
@@ -47,14 +46,14 @@ public class ReturnAdapter extends ListAdapter<Rental, ReturnAdapter.ReturnViewH
     @Override
     public void onBindViewHolder(@NonNull ReturnViewHolder holder, int position) {
         Rental rental = getItem(position);
-        holder.bind(rental, listener);
+        holder.bind(rental);
     }
 
-    static class ReturnViewHolder extends RecyclerView.ViewHolder {
+    public static class ReturnViewHolder extends RecyclerView.ViewHolder {
         private final ImageView ivBookCover;
         private final TextView tvBookTitle;
+        private final TextView tvAuthor;
         private final TextView tvRentalPeriod;
-        private final TextView tvReturnDate;
         private final TextView tvLateFee;
         private final TextView tvStatus;
 
@@ -62,47 +61,29 @@ public class ReturnAdapter extends ListAdapter<Rental, ReturnAdapter.ReturnViewH
             super(itemView);
             ivBookCover = itemView.findViewById(R.id.ivBookCover);
             tvBookTitle = itemView.findViewById(R.id.tvBookTitle);
+            tvAuthor = itemView.findViewById(R.id.tvAuthor);
             tvRentalPeriod = itemView.findViewById(R.id.tvRentalPeriod);
-            tvReturnDate = itemView.findViewById(R.id.tvReturnDate);
             tvLateFee = itemView.findViewById(R.id.tvLateFee);
             tvStatus = itemView.findViewById(R.id.tvStatus);
         }
 
-        public void bind(Rental rental, OnReturnClickListener listener) {
-            tvBookTitle.setText(rental.getBookTitle());
+        public void bind(Rental rental) {
+            tvBookTitle.setText(rental.getBook().getTitle());
+            tvAuthor.setText(rental.getBook().getAuthor());
             
-            SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
             String startDate = dateFormat.format(rental.getStartDate());
             String endDate = dateFormat.format(rental.getEndDate());
-            tvRentalPeriod.setText(String.format("%s to %s", startDate, endDate));
-            
-            String returnDate = dateFormat.format(rental.getReturnDate());
-            tvReturnDate.setText(String.format("Returned on: %s", returnDate));
+            tvRentalPeriod.setText(String.format("%s - %s", startDate, endDate));
             
             double lateFee = rental.calculateLateFee();
-            if (lateFee > 0) {
-                tvLateFee.setText(String.format("Late Fee: ₹%.2f", lateFee));
-                tvLateFee.setVisibility(View.VISIBLE);
-            } else {
-                tvLateFee.setVisibility(View.GONE);
-            }
+            tvLateFee.setText(String.format("₹%.2f", lateFee));
             
             tvStatus.setText(rental.getStatus());
 
             Glide.with(itemView.getContext())
-                    .load(rental.getBookImageUrl())
+                    .load(rental.getBook().getImageUrl())
                     .placeholder(R.drawable.ic_book_placeholder)
                     .into(ivBookCover);
-
-            itemView.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onReturnClick(rental);
-                }
-            });
         }
-    }
-
-    public interface OnReturnClickListener {
-        void onReturnClick(Rental rental);
     }
 } 

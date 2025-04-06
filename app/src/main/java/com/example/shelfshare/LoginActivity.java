@@ -2,133 +2,94 @@ package com.example.shelfshare;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.example.shelfshare.databinding.ActivityLoginBinding;
 import com.example.shelfshare.viewmodels.LoginViewModel;
 import com.google.firebase.auth.FirebaseUser;
 
 public class LoginActivity extends AppCompatActivity {
-    private EditText emailEditText, passwordEditText;
-    private Button loginButton, signUpButton;
-    private ProgressBar progressBar;
+    private ActivityLoginBinding binding;
     private LoginViewModel loginViewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login);
+        binding = ActivityLoginBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
-        // Initialize ViewModel
         loginViewModel = new ViewModelProvider(this).get(LoginViewModel.class);
 
-        // Initialize views
-        emailEditText = findViewById(R.id.emailEditText);
-        passwordEditText = findViewById(R.id.passwordEditText);
-        loginButton = findViewById(R.id.loginButton);
-        signUpButton = findViewById(R.id.signUpButton);
-        progressBar = findViewById(R.id.progressBar);
-
-        // Set up observers
         setupObservers();
-
-        // Set up click listeners
         setupClickListeners();
     }
 
     private void setupObservers() {
-        // Observe login state
-        loginViewModel.getLoginState().observe(this, loginState -> {
-            switch (loginState) {
+        loginViewModel.getLoginState().observe(this, state -> {
+            switch (state) {
                 case LOADING:
                     showLoading(true);
                     break;
                 case SUCCESS:
                     showLoading(false);
-                    navigateToDashboard();
+                    navigateToMain();
                     break;
                 case ERROR:
                     showLoading(false);
-                    showError(loginViewModel.getErrorMessage());
+                    break;
+                case IDLE:
+                    showLoading(false);
                     break;
             }
         });
 
-        // Observe current user
-        loginViewModel.getCurrentUser().observe(this, this::handleUserState);
+        loginViewModel.getErrorMessage().observe(this, errorMessage -> {
+            if (errorMessage != null && !errorMessage.isEmpty()) {
+                showError(errorMessage);
+            }
+        });
     }
 
     private void setupClickListeners() {
-        loginButton.setOnClickListener(v -> attemptLogin());
-        signUpButton.setOnClickListener(v -> navigateToSignUp());
-    }
+        binding.btnLogin.setOnClickListener(v -> {
+            String email = binding.etEmail.getText().toString().trim();
+            String password = binding.etPassword.getText().toString().trim();
 
-    private void attemptLogin() {
-        String email = emailEditText.getText().toString().trim();
-        String password = passwordEditText.getText().toString().trim();
+            if (email.isEmpty() || password.isEmpty()) {
+                showError("Please fill in all fields");
+                return;
+            }
 
-        if (validateInputs(email, password)) {
-            loginViewModel.login(email, password);
-        }
-    }
+            loginViewModel.login(email, password)
+                .addOnSuccessListener(authResult -> {
+                    // Success is handled by the LiveData observer
+                })
+                .addOnFailureListener(e -> {
+                    showError(e.getMessage());
+                });
+        });
 
-    private boolean validateInputs(String email, String password) {
-        if (TextUtils.isEmpty(email)) {
-            emailEditText.setError("Email is required");
-            return false;
-        }
-
-        if (TextUtils.isEmpty(password)) {
-            passwordEditText.setError("Password is required");
-            return false;
-        }
-
-        if (password.length() < 6) {
-            passwordEditText.setError("Password must be at least 6 characters");
-            return false;
-        }
-
-        return true;
-    }
-
-    private void handleUserState(FirebaseUser user) {
-        if (user != null) {
-            navigateToDashboard();
-        }
-    }
-
-    private void navigateToDashboard() {
-        Intent intent = new Intent(LoginActivity.this, DashboardActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(intent);
-        finish();
-    }
-
-    private void navigateToSignUp() {
-        startActivity(new Intent(LoginActivity.this, SignUpActivity.class));
+        binding.tvSignUp.setOnClickListener(v -> {
+            startActivity(new Intent(this, SignUpActivity.class));
+            finish();
+        });
     }
 
     private void showLoading(boolean isLoading) {
-        progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-        loginButton.setEnabled(!isLoading);
-        signUpButton.setEnabled(!isLoading);
+        binding.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+        binding.btnLogin.setEnabled(!isLoading);
     }
 
     private void showError(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        // Check if user is already logged in
-        loginViewModel.checkCurrentUser();
+    private void navigateToMain() {
+        startActivity(new Intent(this, AddBookActivity.class));
+        finish();
     }
 }

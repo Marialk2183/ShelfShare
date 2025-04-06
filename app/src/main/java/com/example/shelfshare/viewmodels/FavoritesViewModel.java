@@ -3,23 +3,77 @@ package com.example.shelfshare.viewmodels;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
-import com.example.shelfshare.models.Book;
-import com.example.shelfshare.utils.FavoritesManager;
-import com.example.shelfshare.utils.FirebaseUtils;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
-
+import com.example.shelfshare.data.BookEntity;
+import com.example.shelfshare.repositories.BookRepository;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import java.util.ArrayList;
 import java.util.List;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.firestore.QuerySnapshot;
 
 public class FavoritesViewModel extends ViewModel {
+    private final BookRepository bookRepository;
+    private final MutableLiveData<List<BookEntity>> favorites = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
     private final MutableLiveData<String> error = new MutableLiveData<>();
-    private final FavoritesManager favoritesManager;
-    private final FirebaseFirestore firestore;
 
     public FavoritesViewModel() {
-        favoritesManager = FavoritesManager.getInstance();
-        firestore = FirebaseUtils.getInstance().getFirestore();
+        bookRepository = new BookRepository();
+    }
+
+    public void loadFavorites() {
+        isLoading.setValue(true);
+        bookRepository.getAllBooks()
+                .observeForever(bookList -> {
+                    List<BookEntity> favoriteList = new ArrayList<>();
+                    for (BookEntity book : bookList) {
+                        if (book.isFavorite()) {
+                            favoriteList.add(book);
+                        }
+                    }
+                    favorites.setValue(favoriteList);
+                    isLoading.setValue(false);
+                });
+    }
+
+    public Task<Void> addToFavorites(BookEntity book) {
+        isLoading.setValue(true);
+        return bookRepository.update(book)
+                .addOnSuccessListener(aVoid -> {
+                    List<BookEntity> currentFavorites = favorites.getValue();
+                    if (currentFavorites == null) {
+                        currentFavorites = new ArrayList<>();
+                    }
+                    currentFavorites.add(book);
+                    favorites.setValue(currentFavorites);
+                    isLoading.setValue(false);
+                })
+                .addOnFailureListener(e -> {
+                    error.setValue(e.getMessage());
+                    isLoading.setValue(false);
+                });
+    }
+
+    public Task<Void> removeFromFavorites(BookEntity book) {
+        isLoading.setValue(true);
+        book.setFavorite(false);
+        return bookRepository.update(book)
+                .addOnSuccessListener(aVoid -> {
+                    List<BookEntity> currentFavorites = favorites.getValue();
+                    if (currentFavorites != null) {
+                        currentFavorites.remove(book);
+                        favorites.setValue(currentFavorites);
+                    }
+                    isLoading.setValue(false);
+                })
+                .addOnFailureListener(e -> {
+                    error.setValue(e.getMessage());
+                    isLoading.setValue(false);
+                });
+    }
+
+    public LiveData<List<BookEntity>> getFavorites() {
+        return favorites;
     }
 
     public LiveData<Boolean> getIsLoading() {
@@ -28,51 +82,5 @@ public class FavoritesViewModel extends ViewModel {
 
     public LiveData<String> getError() {
         return error;
-    }
-
-    public List<Book> getFavoriteBooks() {
-        return favoritesManager.getFavoriteBooks();
-    }
-
-    public void addToFavorites(Book book) {
-        isLoading.setValue(true);
-        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-
-        firestore.collection("users")
-                .document(userId)
-                .collection("favorites")
-                .document(book.getId())
-                .set(book)
-                .addOnSuccessListener(aVoid -> {
-                    favoritesManager.addToFavorites(book);
-                    isLoading.setValue(false);
-                })
-                .addOnFailureListener(e -> {
-                    error.setValue("Failed to add to favorites: " + e.getMessage());
-                    isLoading.setValue(false);
-                });
-    }
-
-    public void removeFromFavorites(Book book) {
-        isLoading.setValue(true);
-        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-
-        firestore.collection("users")
-                .document(userId)
-                .collection("favorites")
-                .document(book.getId())
-                .delete()
-                .addOnSuccessListener(aVoid -> {
-                    favoritesManager.removeFromFavorites(book);
-                    isLoading.setValue(false);
-                })
-                .addOnFailureListener(e -> {
-                    error.setValue("Failed to remove from favorites: " + e.getMessage());
-                    isLoading.setValue(false);
-                });
-    }
-
-    public boolean isFavorite(Book book) {
-        return favoritesManager.isFavorite(book);
     }
 } 

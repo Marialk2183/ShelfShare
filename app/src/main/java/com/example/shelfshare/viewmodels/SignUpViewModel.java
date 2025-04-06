@@ -4,29 +4,35 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import com.example.shelfshare.utils.FirebaseUtils;
+import com.example.shelfshare.data.User;
+import com.example.shelfshare.repositories.UserRepository;
 import com.google.firebase.auth.FirebaseUser;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
 public class SignUpViewModel extends ViewModel {
-    private final FirebaseUtils firebaseUtils;
-    private final MutableLiveData<SignUpState> signUpState = new MutableLiveData<>();
+    private final UserRepository repository;
+    private final MutableLiveData<SignUpState> signUpState = new MutableLiveData<>(SignUpState.IDLE);
     private final MutableLiveData<FirebaseUser> currentUser = new MutableLiveData<>();
-    private String errorMessage = "";
-
-    public enum SignUpState {
-        IDLE,
-        LOADING,
-        SUCCESS,
-        ERROR
-    }
+    private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
+    private final MutableLiveData<String> error = new MutableLiveData<>();
 
     public SignUpViewModel() {
-        firebaseUtils = FirebaseUtils.getInstance();
-        signUpState.setValue(SignUpState.IDLE);
+        repository = new UserRepository();
+    }
+
+    public void signUp(String name, String email, String password) {
+        isLoading.setValue(true);
+        repository.signUp(name, email, password)
+            .addOnSuccessListener(authResult -> {
+                isLoading.setValue(false);
+                signUpState.setValue(SignUpState.SUCCESS);
+                currentUser.setValue(authResult.getUser());
+            })
+            .addOnFailureListener(e -> {
+                isLoading.setValue(false);
+                errorMessage.setValue(e.getMessage());
+                signUpState.setValue(SignUpState.ERROR);
+            });
     }
 
     public LiveData<SignUpState> getSignUpState() {
@@ -37,51 +43,19 @@ public class SignUpViewModel extends ViewModel {
         return currentUser;
     }
 
-    public String getErrorMessage() {
+    public LiveData<String> getErrorMessage() {
         return errorMessage;
     }
 
-    public void signUp(String name, String email, String password) {
-        signUpState.setValue(SignUpState.LOADING);
-        
-        firebaseUtils.signUp(email, password, name)
-                .thenAccept(success -> {
-                    if (success) {
-                        FirebaseUser user = firebaseUtils.getCurrentUser();
-                        if (user != null) {
-                            // Create user profile in Firestore
-                            Map<String, Object> userData = new HashMap<>();
-                            userData.put("name", name);
-                            userData.put("email", email);
-                            userData.put("createdAt", System.currentTimeMillis());
-                            userData.put("location", ""); // Default empty location
-                            userData.put("profileImage", ""); // Default empty profile image
+    public LiveData<Boolean> getIsLoading() {
+        return isLoading;
+    }
 
-                            firebaseUtils.getFirestore()
-                                    .collection("users")
-                                    .document(user.getUid())
-                                    .set(userData)
-                                    .addOnSuccessListener(aVoid -> {
-                                        currentUser.postValue(user);
-                                        signUpState.postValue(SignUpState.SUCCESS);
-                                    })
-                                    .addOnFailureListener(e -> {
-                                        errorMessage = "Error creating user profile: " + e.getMessage();
-                                        signUpState.postValue(SignUpState.ERROR);
-                                    });
-                        } else {
-                            errorMessage = "User not found";
-                            signUpState.postValue(SignUpState.ERROR);
-                        }
-                    } else {
-                        errorMessage = "Sign up failed";
-                        signUpState.postValue(SignUpState.ERROR);
-                    }
-                })
-                .exceptionally(throwable -> {
-                    errorMessage = throwable.getMessage();
-                    signUpState.postValue(SignUpState.ERROR);
-                    return null;
-                });
+    public LiveData<String> getError() {
+        return error;
+    }
+
+    public enum SignUpState {
+        IDLE, LOADING, SUCCESS, ERROR
     }
 } 

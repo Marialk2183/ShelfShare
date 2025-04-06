@@ -6,14 +6,13 @@ import androidx.lifecycle.ViewModel;
 
 import com.example.shelfshare.utils.FirebaseUtils;
 import com.google.firebase.auth.FirebaseUser;
-
-import java.util.concurrent.CompletableFuture;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.AuthResult;
 
 public class LoginViewModel extends ViewModel {
     private final FirebaseUtils firebaseUtils;
-    private final MutableLiveData<LoginState> loginState = new MutableLiveData<>();
-    private final MutableLiveData<FirebaseUser> currentUser = new MutableLiveData<>();
-    private String errorMessage = "";
+    private final MutableLiveData<LoginState> loginState = new MutableLiveData<>(LoginState.IDLE);
+    private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
 
     public enum LoginState {
         IDLE,
@@ -24,57 +23,36 @@ public class LoginViewModel extends ViewModel {
 
     public LoginViewModel() {
         firebaseUtils = FirebaseUtils.getInstance();
-        loginState.setValue(LoginState.IDLE);
     }
 
     public LiveData<LoginState> getLoginState() {
         return loginState;
     }
 
-    public LiveData<FirebaseUser> getCurrentUser() {
-        return currentUser;
-    }
-
-    public String getErrorMessage() {
+    public LiveData<String> getErrorMessage() {
         return errorMessage;
     }
 
-    public void checkCurrentUser() {
-        FirebaseUser user = firebaseUtils.getCurrentUser();
-        if (user != null) {
-            currentUser.setValue(user);
-        }
-    }
-
-    public void login(String email, String password) {
+    public Task<AuthResult> login(String email, String password) {
         loginState.setValue(LoginState.LOADING);
-        
-        firebaseUtils.signIn(email, password)
-                .thenAccept(success -> {
-                    if (success) {
-                        FirebaseUser user = firebaseUtils.getCurrentUser();
-                        if (user != null) {
-                            currentUser.postValue(user);
-                            loginState.postValue(LoginState.SUCCESS);
-                        } else {
-                            errorMessage = "User not found";
-                            loginState.postValue(LoginState.ERROR);
-                        }
+        return firebaseUtils.signIn(email, password)
+                .addOnSuccessListener(authResult -> {
+                    FirebaseUser user = authResult.getUser();
+                    if (user != null) {
+                        loginState.setValue(LoginState.SUCCESS);
                     } else {
-                        errorMessage = "Invalid email or password";
-                        loginState.postValue(LoginState.ERROR);
+                        errorMessage.setValue("User not found");
+                        loginState.setValue(LoginState.ERROR);
                     }
                 })
-                .exceptionally(throwable -> {
-                    errorMessage = throwable.getMessage();
-                    loginState.postValue(LoginState.ERROR);
-                    return null;
+                .addOnFailureListener(e -> {
+                    errorMessage.setValue(e.getMessage());
+                    loginState.setValue(LoginState.ERROR);
                 });
     }
 
     public void signOut() {
         firebaseUtils.signOut();
-        currentUser.setValue(null);
         loginState.setValue(LoginState.IDLE);
     }
 } 

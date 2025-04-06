@@ -4,8 +4,9 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import com.example.shelfshare.models.Book;
+import com.example.shelfshare.data.BookEntity;
 import com.example.shelfshare.models.CartItem;
+import com.example.shelfshare.utils.CartManager;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
@@ -14,17 +15,20 @@ import java.util.List;
 import java.util.Map;
 
 public class CartViewModel extends ViewModel {
-    private final MutableLiveData<List<CartItem>> cartItems = new MutableLiveData<>(new ArrayList<>());
+    private final CartManager cartManager;
+    private final MutableLiveData<List<BookEntity>> cartItems = new MutableLiveData<>();
     private final MutableLiveData<Double> totalAmount = new MutableLiveData<>(0.0);
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
     private final MutableLiveData<String> error = new MutableLiveData<>();
     private final FirebaseFirestore db;
 
     public CartViewModel() {
+        cartManager = CartManager.getInstance();
         db = FirebaseFirestore.getInstance();
+        loadCartItems();
     }
 
-    public LiveData<List<CartItem>> getCartItems() {
+    public LiveData<List<BookEntity>> getCartItems() {
         return cartItems;
     }
 
@@ -40,67 +44,40 @@ public class CartViewModel extends ViewModel {
         return error;
     }
 
-    public void addToCart(Book book) {
-        List<CartItem> currentItems = cartItems.getValue();
-        if (currentItems == null) {
-            currentItems = new ArrayList<>();
-        }
+    public void loadCartItems() {
+        cartItems.setValue(cartManager.getCartItems());
+    }
 
-        boolean found = false;
-        for (CartItem item : currentItems) {
-            if (item.getBook().getId().equals(book.getId())) {
-                item.setQuantity(item.getQuantity() + 1);
-                found = true;
-                break;
-            }
-        }
-
-        if (!found) {
-            currentItems.add(new CartItem(book, 1));
-        }
-
-        cartItems.setValue(currentItems);
+    public void addToCart(BookEntity book) {
+        cartManager.addToCart(book);
+        loadCartItems();
         calculateTotal();
     }
 
-    public void removeFromCart(String bookId) {
-        List<CartItem> currentItems = cartItems.getValue();
-        if (currentItems == null) return;
-
-        currentItems.removeIf(item -> item.getBook().getId().equals(bookId));
-        cartItems.setValue(currentItems);
+    public void removeFromCart(BookEntity book) {
+        cartManager.removeFromCart(book);
+        loadCartItems();
         calculateTotal();
     }
 
-    public void updateQuantity(String bookId, int quantity) {
-        List<CartItem> currentItems = cartItems.getValue();
-        if (currentItems == null) return;
-
-        for (CartItem item : currentItems) {
-            if (item.getBook().getId().equals(bookId)) {
-                item.setQuantity(quantity);
-                break;
-            }
-        }
-
-        cartItems.setValue(currentItems);
+    public void updateQuantity(BookEntity book, int quantity) {
+        cartManager.updateQuantity(book, quantity);
+        loadCartItems();
         calculateTotal();
     }
 
-    private void calculateTotal() {
-        List<CartItem> currentItems = cartItems.getValue();
-        if (currentItems == null) return;
+    public double calculateTotal() {
+        return cartManager.calculateTotal();
+    }
 
-        double total = 0;
-        for (CartItem item : currentItems) {
-            total += item.getBook().getPrice() * item.getQuantity();
-        }
-        totalAmount.setValue(total);
+    public void clearCart() {
+        cartManager.clearCart();
+        loadCartItems();
     }
 
     public void checkout(String userId, String location) {
         isLoading.setValue(true);
-        List<CartItem> currentItems = cartItems.getValue();
+        List<BookEntity> currentItems = cartItems.getValue();
         if (currentItems == null || currentItems.isEmpty()) {
             error.setValue("Cart is empty");
             isLoading.setValue(false);
@@ -115,11 +92,11 @@ public class CartViewModel extends ViewModel {
         orderData.put("totalAmount", totalAmount.getValue());
 
         Map<String, Object> items = new HashMap<>();
-        for (CartItem item : currentItems) {
+        for (BookEntity item : currentItems) {
             Map<String, Object> itemData = new HashMap<>();
-            itemData.put("title", item.getBook().getTitle());
-            itemData.put("price", item.getBook().getPrice());
-            items.put(item.getBook().getId(), itemData);
+            itemData.put("title", item.getTitle());
+            itemData.put("price", item.getPrice());
+            items.put(item.getId(), itemData);
         }
         orderData.put("items", items);
 

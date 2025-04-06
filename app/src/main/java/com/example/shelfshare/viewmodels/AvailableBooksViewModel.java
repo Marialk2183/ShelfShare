@@ -1,47 +1,98 @@
 package com.example.shelfshare.viewmodels;
 
-import android.app.Application;
-import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.ViewModel;
+import com.example.shelfshare.repositories.BookRepository;
 import com.example.shelfshare.data.BookEntity;
-import com.example.shelfshare.data.BookRepository;
 import java.util.List;
+import java.util.ArrayList;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.firestore.QuerySnapshot;
 
-public class AvailableBooksViewModel extends AndroidViewModel {
-    private BookRepository repository;
-    private LiveData<List<BookEntity>> availableBooks;
+public class AvailableBooksViewModel extends ViewModel {
+    private final BookRepository repository;
+    private final MutableLiveData<List<BookEntity>> books = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
+    private final MutableLiveData<String> error = new MutableLiveData<>();
 
-    public AvailableBooksViewModel(Application application) {
-        super(application);
-        repository = new BookRepository(application);
-        availableBooks = repository.getAvailableBooks();
+    public AvailableBooksViewModel() {
+        repository = new BookRepository();
     }
 
-    public LiveData<List<BookEntity>> getAvailableBooks() {
-        return availableBooks;
+    public void loadBooks() {
+        isLoading.setValue(true);
+        repository.getAvailableBooks()
+            .get()
+            .addOnSuccessListener(querySnapshot -> {
+                List<BookEntity> bookList = new ArrayList<>();
+                for (var document : querySnapshot.getDocuments()) {
+                    BookEntity book = document.toObject(BookEntity.class);
+                    if (book != null) {
+                        book.setId(document.getId());
+                        bookList.add(book);
+                    }
+                }
+                books.setValue(bookList);
+                isLoading.setValue(false);
+            })
+            .addOnFailureListener(e -> {
+                error.setValue(e.getMessage());
+                isLoading.setValue(false);
+            });
     }
 
-    public void insert(BookEntity book) {
-        repository.insert(book);
+    public void searchBooks(String query) {
+        isLoading.setValue(true);
+        repository.searchBooks(query)
+            .get()
+            .addOnSuccessListener(querySnapshot -> {
+                List<BookEntity> bookList = new ArrayList<>();
+                for (var document : querySnapshot.getDocuments()) {
+                    BookEntity book = document.toObject(BookEntity.class);
+                    if (book != null && book.isAvailable()) {
+                        book.setId(document.getId());
+                        bookList.add(book);
+                    }
+                }
+                books.setValue(bookList);
+                isLoading.setValue(false);
+            })
+            .addOnFailureListener(e -> {
+                error.setValue(e.getMessage());
+                isLoading.setValue(false);
+            });
     }
 
-    public void insertAll(List<BookEntity> books) {
-        repository.insertAll(books);
+    public LiveData<List<BookEntity>> getBooks() {
+        return books;
     }
 
-    public void update(BookEntity book) {
-        repository.update(book);
+    public LiveData<Boolean> getIsLoading() {
+        return isLoading;
     }
 
-    public void delete(BookEntity book) {
-        repository.delete(book);
+    public LiveData<String> getError() {
+        return error;
     }
 
-    public void updateFavoriteStatus(String bookId, boolean isFavorite) {
-        repository.updateFavoriteStatus(bookId, isFavorite);
+    public Task<Void> insert(BookEntity book) {
+        return repository.insert(book);
     }
 
-    public LiveData<List<BookEntity>> searchBooks(String query) {
-        return repository.searchBooks(query);
+    public Task<Void> insertAll(List<BookEntity> books) {
+        return repository.insertAll(books);
+    }
+
+    public Task<Void> update(BookEntity book) {
+        return repository.update(book);
+    }
+
+    public Task<Void> delete(String bookId) {
+        return repository.delete(bookId);
+    }
+
+    public Task<Void> updateAvailability(String bookId, boolean available) {
+        return repository.updateAvailability(bookId, available);
     }
 } 

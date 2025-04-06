@@ -1,37 +1,35 @@
 package com.example.shelfshare.models;
 
+import com.google.firebase.firestore.Exclude;
 import com.google.firebase.firestore.IgnoreExtraProperties;
+import java.util.Date;
 
 @IgnoreExtraProperties
 public class Rental {
     private String id;
     private String bookId;
     private String userId;
-    private long rentalDate;
-    private long returnDate;
-    private String status;
+    private Date startDate;
+    private Date endDate;
     private double totalAmount;
-    private String bookTitle;
-    private String bookImageUrl;
+    private String status;
+    private Book book;
+    private double lateFee;
 
     public Rental() {
         // Default constructor required for Firestore
     }
 
-    public Rental(String id, String bookId, String userId, long rentalDate, long returnDate, 
-                 String status, double totalAmount, String bookTitle, String bookImageUrl) {
-        this.id = id;
+    public Rental(String bookId, String userId, Date startDate, Date endDate, double totalAmount) {
         this.bookId = bookId;
         this.userId = userId;
-        this.rentalDate = rentalDate;
-        this.returnDate = returnDate;
-        this.status = status;
+        this.startDate = startDate;
+        this.endDate = endDate;
         this.totalAmount = totalAmount;
-        this.bookTitle = bookTitle;
-        this.bookImageUrl = bookImageUrl;
+        this.status = "PENDING";
     }
 
-    // Getters and Setters
+    @Exclude
     public String getId() {
         return id;
     }
@@ -56,28 +54,20 @@ public class Rental {
         this.userId = userId;
     }
 
-    public long getRentalDate() {
-        return rentalDate;
+    public Date getStartDate() {
+        return startDate;
     }
 
-    public void setRentalDate(long rentalDate) {
-        this.rentalDate = rentalDate;
+    public void setStartDate(Date startDate) {
+        this.startDate = startDate;
     }
 
-    public long getReturnDate() {
-        return returnDate;
+    public Date getEndDate() {
+        return endDate;
     }
 
-    public void setReturnDate(long returnDate) {
-        this.returnDate = returnDate;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
+    public void setEndDate(Date endDate) {
+        this.endDate = endDate;
     }
 
     public double getTotalAmount() {
@@ -88,19 +78,34 @@ public class Rental {
         this.totalAmount = totalAmount;
     }
 
-    public String getBookTitle() {
-        return bookTitle;
+    public String getStatus() {
+        return status;
     }
 
-    public void setBookTitle(String bookTitle) {
-        this.bookTitle = bookTitle;
+    public void setStatus(String status) {
+        this.status = status;
     }
 
-    public String getBookImageUrl() {
-        return bookImageUrl;
+    @Exclude
+    public Book getBook() {
+        return book;
     }
 
-    public void setBookImageUrl(String bookImageUrl) {
-        this.bookImageUrl = bookImageUrl;
+    public void setBook(Book book) {
+        this.book = book;
+    }
+
+    @Exclude
+    public double calculateLateFee() {
+        if (status.equals("RETURNED")) {
+            Date returnDate = new Date();
+            if (returnDate.after(endDate)) {
+                long diff = returnDate.getTime() - endDate.getTime();
+                long days = diff / (24 * 60 * 60 * 1000);
+                lateFee = days * book.getPrice();
+                return lateFee;
+            }
+        }
+        return 0;
     }
 } 

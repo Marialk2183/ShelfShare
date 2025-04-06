@@ -4,145 +4,129 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.RatingBar;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
-
+import android.widget.Toast;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.lifecycle.ViewModelProvider;
-
 import com.bumptech.glide.Glide;
-import com.example.shelfshare.models.Book;
+import com.example.shelfshare.data.BookEntity;
+import com.example.shelfshare.dialogs.RentalConfirmationDialog;
 import com.example.shelfshare.viewmodels.BookDetailsViewModel;
-import com.google.android.material.button.MaterialButton;
-import com.google.android.material.progressindicator.CircularProgressIndicator;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
 
 public class BookDetailsActivity extends AppCompatActivity {
     private BookDetailsViewModel viewModel;
-    private CircularProgressIndicator progressBar;
-    private TextView tvBookTitle, tvAuthor, tvPrice, tvLocation, tvDescription;
-    private RatingBar ratingBar;
-    private MaterialButton btnRent, btnAddToFavorites;
-    private String bookId;
-    private boolean isFavorite = false;
+    private ImageView ivCover;
+    private TextView tvTitle;
+    private TextView tvAuthor;
+    private TextView tvDescription;
+    private TextView tvPrice;
+    private TextView tvCategory;
+    private FloatingActionButton fabFavorite;
+    private Button btnRent;
+    private ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_book_details);
 
-        // Get book ID from intent
-        bookId = getIntent().getStringExtra("book_id");
-        if (bookId == null) {
-            finish();
-            return;
-        }
-
-        // Initialize ViewModel
-        viewModel = new ViewModelProvider(this).get(BookDetailsViewModel.class);
-
-        // Initialize views
-        initializeViews();
-        setupToolbar();
-        setupClickListeners();
-        setupObservers();
-
-        // Load book details
-        viewModel.loadBookDetails(bookId);
-        viewModel.checkIfFavorite(bookId);
-    }
-
-    private void initializeViews() {
-        progressBar = findViewById(R.id.progressBar);
-        tvBookTitle = findViewById(R.id.tvBookTitle);
-        tvAuthor = findViewById(R.id.tvAuthor);
-        tvPrice = findViewById(R.id.tvPrice);
-        tvLocation = findViewById(R.id.tvLocation);
-        tvDescription = findViewById(R.id.tvDescription);
-        ratingBar = findViewById(R.id.ratingBar);
-        btnRent = findViewById(R.id.btnRent);
-        btnAddToFavorites = findViewById(R.id.btnAddToFavorites);
-    }
-
-    private void setupToolbar() {
-        Toolbar toolbar = findViewById(R.id.toolbar);
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
-    }
 
-    private void setupClickListeners() {
-        btnRent.setOnClickListener(v -> {
-            if (FirebaseAuth.getInstance().getCurrentUser() == null) {
-                startActivity(new Intent(this, LoginActivity.class));
-                return;
-            }
-            viewModel.rentBook(bookId);
-        });
+        ivCover = findViewById(R.id.ivCover);
+        tvTitle = findViewById(R.id.tvTitle);
+        tvAuthor = findViewById(R.id.tvAuthor);
+        tvDescription = findViewById(R.id.tvDescription);
+        tvPrice = findViewById(R.id.tvPrice);
+        tvCategory = findViewById(R.id.tvCategory);
+        fabFavorite = findViewById(R.id.fabFavorite);
+        btnRent = findViewById(R.id.btnRent);
+        progressBar = findViewById(R.id.progressBar);
 
-        btnAddToFavorites.setOnClickListener(v -> {
-            if (FirebaseAuth.getInstance().getCurrentUser() == null) {
-                startActivity(new Intent(this, LoginActivity.class));
-                return;
-            }
-            if (isFavorite) {
+        String bookId = getIntent().getStringExtra("book_id");
+        if (bookId == null) {
+            Toast.makeText(this, "Book ID not found", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
+        viewModel = new ViewModelProvider(this).get(BookDetailsViewModel.class);
+        observeViewModel();
+        viewModel.loadBookDetails(bookId);
+
+        fabFavorite.setOnClickListener(v -> {
+            if (viewModel.getIsFavorite().getValue() != null && viewModel.getIsFavorite().getValue()) {
                 viewModel.removeFromFavorites(bookId);
             } else {
                 viewModel.addToFavorites(bookId);
             }
         });
+
+        btnRent.setOnClickListener(v -> {
+            BookEntity book = viewModel.getBook().getValue();
+            if (book != null) {
+                RentalConfirmationDialog dialog = RentalConfirmationDialog.newInstance(book, 7, book.getPrice());
+                dialog.setOnRentalConfirmedListener((bookEntity, days, price) -> {
+                    viewModel.rentBook(bookEntity, days, price);
+                });
+                dialog.show(getSupportFragmentManager(), "rental_confirmation");
+            }
+        });
     }
 
-    private void setupObservers() {
+    private void observeViewModel() {
         viewModel.getBook().observe(this, book -> {
             if (book != null) {
-                updateUI(book);
+                tvTitle.setText(book.getTitle());
+                tvAuthor.setText(book.getAuthor());
+                tvDescription.setText(book.getDescription());
+                tvPrice.setText(String.format("$%.2f", book.getPrice()));
+                tvCategory.setText(book.getCategory());
+
+                if (book.getImageUrl() != null) {
+                    Glide.with(this)
+                            .load(book.getImageUrl())
+                            .into(ivCover);
+                }
             }
+        });
+
+        viewModel.getIsFavorite().observe(this, isFavorite -> {
+            fabFavorite.setImageResource(isFavorite ? R.drawable.ic_favorite : R.drawable.ic_favorite_border);
         });
 
         viewModel.getIsLoading().observe(this, isLoading -> {
             progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+            btnRent.setEnabled(!isLoading);
+            fabFavorite.setEnabled(!isLoading);
         });
 
-        viewModel.getIsFavorite().observe(this, favorite -> {
-            isFavorite = favorite;
-            updateFavoriteButton();
+        viewModel.getError().observe(this, error -> {
+            if (error != null) {
+                Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+            }
         });
 
         viewModel.getRentSuccess().observe(this, success -> {
             if (success) {
-                // Show success message
-                // Update UI accordingly
+                Toast.makeText(this, "Book rented successfully", Toast.LENGTH_SHORT).show();
+                finish();
             }
         });
     }
 
-    private void updateUI(Book book) {
-        tvBookTitle.setText(book.getTitle());
-        tvAuthor.setText(book.getAuthor());
-        tvPrice.setText(String.format("₹%.2f/day", book.getPrice()));
-        tvLocation.setText(book.getLocation());
-        tvDescription.setText(book.getDescription());
-        ratingBar.setRating(book.getRating());
-
-        // Load book cover image
-        Glide.with(this)
-                .load(book.getImageUrl())
-                .placeholder(R.drawable.ic_book_placeholder)
-                .into(findViewById(R.id.ivBookCover));
-    }
-
-    private void updateFavoriteButton() {
-        btnAddToFavorites.setIconResource(isFavorite ? 
-            R.drawable.ic_favorite : R.drawable.ic_favorite_border);
-        btnAddToFavorites.setText(isFavorite ? 
-            "Remove from Favorites" : "Add to Favorites");
-    }
-
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
             onBackPressed();
             return true;

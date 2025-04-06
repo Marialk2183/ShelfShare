@@ -2,57 +2,37 @@ package com.example.shelfshare;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.MenuItem;
-import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.shelfshare.adapters.CartAdapter;
-import com.example.shelfshare.models.CartItem;
+import com.example.shelfshare.data.BookEntity;
 import com.example.shelfshare.viewmodels.CartViewModel;
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.progressindicator.CircularProgressIndicator;
 
 public class CartActivity extends AppCompatActivity {
     private CartViewModel viewModel;
     private RecyclerView rvCart;
-    private CircularProgressIndicator progressBar;
-    private TextView tvEmpty, tvTotal;
+    private TextView tvTotal;
     private MaterialButton btnCheckout;
-    private CartAdapter cartAdapter;
+    private CartAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_cart);
 
-        // Initialize ViewModel
-        viewModel = new ViewModelProvider(this).get(CartViewModel.class);
-
-        // Initialize views
-        initializeViews();
         setupToolbar();
-        setupRecyclerView();
-        setupClickListeners();
-        setupObservers();
-
-        // Load cart items
-        viewModel.loadCartItems();
-    }
-
-    private void initializeViews() {
-        rvCart = findViewById(R.id.rvCart);
-        progressBar = findViewById(R.id.progressBar);
-        tvEmpty = findViewById(R.id.tvEmpty);
-        tvTotal = findViewById(R.id.tvTotal);
-        btnCheckout = findViewById(R.id.btnCheckout);
+        setupViews();
+        setupViewModel();
     }
 
     private void setupToolbar() {
-        Toolbar toolbar = findViewById(R.id.toolbar);
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle("Shopping Cart");
@@ -60,50 +40,45 @@ public class CartActivity extends AppCompatActivity {
         }
     }
 
-    private void setupRecyclerView() {
-        cartAdapter = new CartAdapter(
-            cartItem -> viewModel.updateQuantity(cartItem, cartItem.getQuantity() + 1),
-            cartItem -> viewModel.updateQuantity(cartItem, cartItem.getQuantity() - 1),
-            cartItem -> viewModel.removeFromCart(cartItem)
-        );
-        rvCart.setLayoutManager(new LinearLayoutManager(this));
-        rvCart.setAdapter(cartAdapter);
-    }
+    private void setupViews() {
+        rvCart = findViewById(R.id.rv_cart);
+        tvTotal = findViewById(R.id.tv_total);
+        btnCheckout = findViewById(R.id.btn_checkout);
 
-    private void setupClickListeners() {
+        rvCart.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new CartAdapter(book -> viewModel.removeFromCart(book));
+        rvCart.setAdapter(adapter);
+
         btnCheckout.setOnClickListener(v -> {
-            if (viewModel.getCartItems().getValue() != null && 
-                !viewModel.getCartItems().getValue().isEmpty()) {
-                // Navigate to checkout
-                Intent intent = new Intent(this, CheckoutActivity.class);
-                startActivity(intent);
+            if (viewModel.getCartItems().getValue() != null && !viewModel.getCartItems().getValue().isEmpty()) {
+                startActivity(new Intent(this, CheckoutActivity.class));
+            } else {
+                Toast.makeText(this, "Your cart is empty", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private void setupObservers() {
+    private void setupViewModel() {
+        viewModel = new ViewModelProvider(this).get(CartViewModel.class);
         viewModel.getCartItems().observe(this, cartItems -> {
-            cartAdapter.submitList(cartItems);
-            tvEmpty.setVisibility(cartItems.isEmpty() ? View.VISIBLE : View.GONE);
-            btnCheckout.setEnabled(!cartItems.isEmpty());
+            adapter.submitList(cartItems);
+            updateTotal();
         });
-
-        viewModel.getTotal().observe(this, total -> {
-            tvTotal.setText(String.format("Total: ₹%.2f", total));
-        });
-
-        viewModel.getIsLoading().observe(this, isLoading -> {
-            progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-            rvCart.setVisibility(isLoading ? View.GONE : View.VISIBLE);
+        viewModel.getError().observe(this, error -> {
+            if (error != null) {
+                Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
+    private void updateTotal() {
+        double total = viewModel.calculateTotal();
+        tvTotal.setText(String.format("Total: $%.2f", total));
+    }
+
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == android.R.id.home) {
-            onBackPressed();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
+    public boolean onSupportNavigateUp() {
+        onBackPressed();
+        return true;
     }
 } 

@@ -3,79 +3,79 @@ package com.example.shelfshare;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.TextView;
-
+import android.widget.ProgressBar;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.example.shelfshare.adapters.RentalAdapter;
-import com.example.shelfshare.models.Rental;
+import com.example.shelfshare.data.BookEntity;
+import com.example.shelfshare.data.Rental;
+import com.example.shelfshare.dialogs.RentalConfirmationDialog;
 import com.example.shelfshare.viewmodels.RentalViewModel;
-import com.google.android.material.progressindicator.CircularProgressIndicator;
+import com.google.android.material.appbar.MaterialToolbar;
+import java.util.ArrayList;
 
-public class RentalActivity extends AppCompatActivity {
+public class RentalActivity extends AppCompatActivity implements RentalAdapter.OnRentalClickListener, RentalConfirmationDialog.OnRentalConfirmedListener {
     private RentalViewModel viewModel;
-    private RecyclerView rvRentals;
-    private CircularProgressIndicator progressBar;
-    private TextView tvEmpty;
-    private RentalAdapter rentalAdapter;
+    private RentalAdapter adapter;
+    private ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_rental);
 
-        // Initialize ViewModel
-        viewModel = new ViewModelProvider(this).get(RentalViewModel.class);
-
-        // Initialize views
-        initializeViews();
-        setupToolbar();
-        setupRecyclerView();
-        setupObservers();
-
-        // Load rentals
-        viewModel.loadRentals();
-    }
-
-    private void initializeViews() {
-        rvRentals = findViewById(R.id.rvRentals);
-        progressBar = findViewById(R.id.progressBar);
-        tvEmpty = findViewById(R.id.tvEmpty);
-    }
-
-    private void setupToolbar() {
-        Toolbar toolbar = findViewById(R.id.toolbar);
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("My Rentals");
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle("My Rentals");
         }
+
+        progressBar = findViewById(R.id.progressBar);
+        RecyclerView recyclerView = findViewById(R.id.recyclerView);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        adapter = new RentalAdapter(new ArrayList<>(), this);
+        recyclerView.setAdapter(adapter);
+
+        viewModel = new ViewModelProvider(this).get(RentalViewModel.class);
+        observeViewModel();
     }
 
-    private void setupRecyclerView() {
-        rentalAdapter = new RentalAdapter(rental -> {
-            // Handle rental click
-            RentalConfirmationDialog dialog = new RentalConfirmationDialog(rental);
-            dialog.show(getSupportFragmentManager(), "RentalConfirmationDialog");
-        });
-        rvRentals.setLayoutManager(new LinearLayoutManager(this));
-        rvRentals.setAdapter(rentalAdapter);
-    }
-
-    private void setupObservers() {
+    private void observeViewModel() {
         viewModel.getRentals().observe(this, rentals -> {
-            rentalAdapter.submitList(rentals);
-            tvEmpty.setVisibility(rentals.isEmpty() ? View.VISIBLE : View.GONE);
+            adapter.updateRentals(rentals);
         });
 
         viewModel.getIsLoading().observe(this, isLoading -> {
             progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-            rvRentals.setVisibility(isLoading ? View.GONE : View.VISIBLE);
         });
+
+        viewModel.getError().observe(this, error -> {
+            if (error != null) {
+                Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        viewModel.loadRentals();
+    }
+
+    @Override
+    public void onRentalClick(Rental rental) {
+        // Handle rental click, e.g., show rental details
+        Toast.makeText(this, "Rental clicked: " + rental.getBookTitle(), Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onRentalConfirmed(BookEntity book, int days, double price) {
+        viewModel.createRental(book, days, price);
     }
 
     @Override

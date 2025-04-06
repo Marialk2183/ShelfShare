@@ -1,29 +1,38 @@
 package com.example.shelfshare.viewmodels;
 
+import android.app.Application;
+import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ViewModel;
+import com.example.shelfshare.data.BookEntity;
 import com.example.shelfshare.models.Book;
+import com.example.shelfshare.repositories.OrderRepository;
 import com.example.shelfshare.utils.CartManager;
 import com.example.shelfshare.utils.FirebaseUtils;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.DocumentReference;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.Map;
 import java.util.HashMap;
 
-public class CheckoutViewModel extends ViewModel {
+public class CheckoutViewModel extends AndroidViewModel {
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
     private final MutableLiveData<Boolean> checkoutSuccess = new MutableLiveData<>(false);
     private final MutableLiveData<String> error = new MutableLiveData<>();
     private final CartManager cartManager;
     private final FirebaseFirestore db;
+    private final OrderRepository orderRepository;
+    private final MutableLiveData<Boolean> orderSuccess = new MutableLiveData<>();
 
-    public CheckoutViewModel() {
+    public CheckoutViewModel(Application application) {
+        super(application);
         cartManager = CartManager.getInstance();
         db = FirebaseFirestore.getInstance();
+        orderRepository = new OrderRepository();
     }
 
     public LiveData<Boolean> getIsLoading() {
@@ -39,73 +48,79 @@ public class CheckoutViewModel extends ViewModel {
     }
 
     public List<Book> getCartItems() {
-        return cartManager.getCartItems();
+        List<BookEntity> bookEntities = cartManager.getCartItems();
+        List<Book> books = new ArrayList<>();
+        for (BookEntity entity : bookEntities) {
+            books.add(convertToBook(entity));
+        }
+        return books;
     }
 
     public double calculateTotal() {
         return cartManager.calculateTotal();
     }
 
-    public void placeOrder(String fullName, String phone, String address, 
-                         String cardNumber, String expiryDate, String cvv) {
-        if (!validateInputs(fullName, phone, address, cardNumber, expiryDate, cvv)) {
+    public void placeOrder(String fullName, String phone, String address) {
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        List<BookEntity> cartItems = cartManager.getCartItems();
+        
+        if (cartItems.isEmpty()) {
+            error.setValue("Cart is empty");
             return;
         }
 
-        isLoading.setValue(true);
-        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         String orderId = UUID.randomUUID().toString();
+        Order order = new Order(
+            orderId,
+            userId,
+            fullName,
+            phone,
+            address,
+            cartItems,
+            calculateTotal(),
+            System.currentTimeMillis()
+        );
 
-        // Create order document
-        db.collection("orders")
-                .document(orderId)
-                .set(createOrderData(userId, fullName, phone, address, orderId))
-                .addOnSuccessListener(aVoid -> {
-                    // Clear cart and update success state
-                    cartManager.clearCart();
-                    checkoutSuccess.setValue(true);
-                    isLoading.setValue(false);
-                })
-                .addOnFailureListener(e -> {
-                    error.setValue("Failed to place order: " + e.getMessage());
-                    isLoading.setValue(false);
-                });
+        orderRepository.createOrder(order)
+            .addOnSuccessListener(aVoid -> {
+                cartManager.clearCart();
+                checkoutSuccess.setValue(true);
+            })
+            .addOnFailureListener(e -> error.setValue(e.getMessage()));
     }
 
-    private boolean validateInputs(String fullName, String phone, String address,
-                                 String cardNumber, String expiryDate, String cvv) {
-        if (fullName.isEmpty() || phone.isEmpty() || address.isEmpty() ||
-            cardNumber.isEmpty() || expiryDate.isEmpty() || cvv.isEmpty()) {
-            error.setValue("Please fill in all fields");
-            return false;
-        }
-
-        if (cardNumber.length() != 16) {
-            error.setValue("Invalid card number");
-            return false;
-        }
-
-        if (cvv.length() != 3) {
-            error.setValue("Invalid CVV");
-            return false;
-        }
-
-        return true;
+    private Book convertToBook(BookEntity entity) {
+        Book book = new Book();
+        book.setId(entity.getId());
+        book.setTitle(entity.getTitle());
+        book.setAuthor(entity.getAuthor());
+        book.setLocation(entity.getLocation());
+        book.setPrice(entity.getPrice());
+        book.setAvailable(entity.isAvailable());
+        book.setImageUrl(entity.getImageUrl());
+        return book;
     }
 
-    private Object createOrderData(String userId, String fullName, String phone,
-                                 String address, String orderId) {
-        return new Object() {
-            public String orderId = orderId;
-            public String userId = userId;
-            public String fullName = fullName;
-            public String phone = phone;
-            public String address = address;
-            public List<Book> items = getCartItems();
-            public double total = calculateTotal();
-            public long timestamp = System.currentTimeMillis();
-            public String status = "pending";
-        };
+    public static class Order {
+        public String orderId;
+        public String userId;
+        public String fullName;
+        public String phone;
+        public String address;
+        public List<BookEntity> items;
+        public double totalAmount;
+        public long createdAt;
+
+        public Order(String orderId, String userId, String fullName, String phone, String address, List<BookEntity> items, double totalAmount, long createdAt) {
+            this.orderId = orderId;
+            this.userId = userId;
+            this.fullName = fullName;
+            this.phone = phone;
+            this.address = address;
+            this.items = items;
+            this.totalAmount = totalAmount;
+            this.createdAt = createdAt;
+        }
     }
 
     public void processCheckout(String userId, String location, Map<String, Book> cartItems) {
@@ -143,5 +158,9 @@ public class CheckoutViewModel extends ViewModel {
                     error.setValue("Failed to process checkout");
                     isLoading.setValue(false);
                 });
+    }
+
+    public LiveData<Boolean> getOrderSuccess() {
+        return orderSuccess;
     }
 } 

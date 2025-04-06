@@ -3,13 +3,15 @@ package com.example.shelfshare.utils;
 import com.example.shelfshare.data.BookEntity;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class FavoritesManager {
     private static FavoritesManager instance;
-    private List<BookEntity> favoriteBooks;
+    private final Map<String, BookEntity> favoriteBooks;
 
     private FavoritesManager() {
-        favoriteBooks = new ArrayList<>();
+        favoriteBooks = new HashMap<>();
     }
 
     public static FavoritesManager getInstance() {
@@ -20,20 +22,18 @@ public class FavoritesManager {
     }
 
     public void addToFavorites(BookEntity book) {
-        if (!favoriteBooks.contains(book)) {
-            favoriteBooks.add(book);
-        }
+        favoriteBooks.put(book.getId(), book);
     }
 
     public void removeFromFavorites(BookEntity book) {
-        favoriteBooks.remove(book);
+        favoriteBooks.remove(book.getId());
+    }
+
+    public boolean isFavorite(String bookId) {
+        return favoriteBooks.containsKey(bookId);
     }
 
     public List<BookEntity> getFavoriteBooks() {
-        return favoriteBooks;
-    }
-
-    public boolean isFavorite(BookEntity book) {
-        return favoriteBooks.contains(book);
+        return new ArrayList<>(favoriteBooks.values());
     }
 } 

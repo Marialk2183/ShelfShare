@@ -3,26 +3,69 @@ package com.example.shelfshare.viewmodels;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
-
-import com.example.shelfshare.models.Book;
-import com.google.firebase.firestore.FirebaseFirestore;
+import com.example.shelfshare.data.BookEntity;
+import com.example.shelfshare.repositories.BookRepository;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-
 import java.util.ArrayList;
 import java.util.List;
 
 public class BookListViewModel extends ViewModel {
-    private final MutableLiveData<List<Book>> books = new MutableLiveData<>(new ArrayList<>());
+    private final BookRepository repository;
+    private final MutableLiveData<List<BookEntity>> books = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
     private final MutableLiveData<String> error = new MutableLiveData<>();
-    private final FirebaseFirestore db;
 
     public BookListViewModel() {
-        db = FirebaseFirestore.getInstance();
-        loadBooks();
+        repository = new BookRepository();
     }
 
-    public LiveData<List<Book>> getBooks() {
+    public void loadBooks() {
+        isLoading.setValue(true);
+        repository.getAvailableBooks().get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<BookEntity> bookList = new ArrayList<>();
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        BookEntity book = document.toObject(BookEntity.class);
+                        book.setId(document.getId());
+                        bookList.add(book);
+                    }
+                    books.setValue(bookList);
+                    isLoading.setValue(false);
+                })
+                .addOnFailureListener(e -> {
+                    error.setValue(e.getMessage());
+                    isLoading.setValue(false);
+                });
+    }
+
+    public void loadBooksByCategory(String categoryId) {
+        isLoading.setValue(true);
+        repository.getBooksByCategory(categoryId).observeForever(bookList -> {
+            books.setValue(bookList);
+            isLoading.setValue(false);
+        });
+    }
+
+    public void searchBooks(String query) {
+        isLoading.setValue(true);
+        repository.searchBooks(query).get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<BookEntity> bookList = new ArrayList<>();
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        BookEntity book = document.toObject(BookEntity.class);
+                        book.setId(document.getId());
+                        bookList.add(book);
+                    }
+                    books.setValue(bookList);
+                    isLoading.setValue(false);
+                })
+                .addOnFailureListener(e -> {
+                    error.setValue(e.getMessage());
+                    isLoading.setValue(false);
+                });
+    }
+
+    public LiveData<List<BookEntity>> getBooks() {
         return books;
     }
 
@@ -32,51 +75,5 @@ public class BookListViewModel extends ViewModel {
 
     public LiveData<String> getError() {
         return error;
-    }
-
-    public void loadBooks() {
-        isLoading.setValue(true);
-        db.collection("books")
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    List<Book> bookList = new ArrayList<>();
-                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
-                        Book book = document.toObject(Book.class);
-                        book.setId(document.getId());
-                        bookList.add(book);
-                    }
-                    books.setValue(bookList);
-                    isLoading.setValue(false);
-                })
-                .addOnFailureListener(e -> {
-                    error.setValue("Failed to load books");
-                    isLoading.setValue(false);
-                });
-    }
-
-    public void searchBooks(String query) {
-        isLoading.setValue(true);
-        db.collection("books")
-                .whereGreaterThanOrEqualTo("title", query)
-                .whereLessThanOrEqualTo("title", query + "\uf8ff")
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    List<Book> bookList = new ArrayList<>();
-                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
-                        Book book = document.toObject(Book.class);
-                        book.setId(document.getId());
-                        bookList.add(book);
-                    }
-                    books.setValue(bookList);
-                    isLoading.setValue(false);
-                })
-                .addOnFailureListener(e -> {
-                    error.setValue("Failed to search books");
-                    isLoading.setValue(false);
-                });
-    }
-
-    public void loadBooksByCategory(String categoryId) {
-//        pass;
     }
 }
