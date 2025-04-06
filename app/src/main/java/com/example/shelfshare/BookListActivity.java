@@ -42,14 +42,14 @@ public class BookListActivity extends AppCompatActivity {
         initializeViews();
         setupToolbar(categoryName);
         setupRecyclerView();
-        setupSearchBar();
+//        setupSearchBar();
         setupObservers();
 
         // Load books
         if (categoryId != null) {
             viewModel.loadBooksByCategory(categoryId);
         } else {
-            viewModel.loadAllBooks();
+            viewModel.loadBooks();
         }
     }
 
@@ -80,21 +80,21 @@ public class BookListActivity extends AppCompatActivity {
         rvBooks.setAdapter(bookAdapter);
     }
 
-    private void setupSearchBar() {
-        searchBar.setOnQueryTextListener(new SearchBar.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                viewModel.searchBooks(query);
-                return true;
-            }
-
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                viewModel.searchBooks(newText);
-                return true;
-            }
-        });
-    }
+//    private void setupSearchBar() {
+//        searchBar.setOnQueryTextListener(new SearchBar.OnQueryTextListener() {
+//            @Override
+//            public boolean onQueryTextSubmit(String query) {
+//                viewModel.searchBooks(query);
+//                return true;
+//            }
+//
+//            @Override
+//            public boolean onQueryTextChange(String newText) {
+//                viewModel.searchBooks(newText);
+//                return true;
+//            }
+//        });
+//    }
 
     private void setupObservers() {
         viewModel.getBooks().observe(this, books -> {

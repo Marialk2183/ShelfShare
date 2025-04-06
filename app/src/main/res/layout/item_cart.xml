@@ -57,10 +57,11 @@
 
                 <ImageButton
                     android:id="@+id/btnDecrease"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:src="@drawable/ic_remove"
-                    android:background="?attr/selectableItemBackgroundBorderless"/>
+                    android:layout_width="56dp"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="for remove"
+                    android:src="@drawable/baseline_delete_24" />
 
                 <TextView
                     android:id="@+id/tvQuantity"
@@ -73,18 +74,20 @@
 
                 <ImageButton
                     android:id="@+id/btnIncrease"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:src="@drawable/ic_add"
-                    android:background="?attr/selectableItemBackgroundBorderless"/>
+                    android:layout_width="61dp"
+                    android:layout_height="76dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="add"
+                    android:src="@drawable/baseline_add_24" />
 
                 <ImageButton
                     android:id="@+id/btnRemove"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
+                    android:layout_width="67dp"
+                    android:layout_height="match_parent"
                     android:layout_marginStart="8dp"
-                    android:src="@drawable/ic_delete"
-                    android:background="?attr/selectableItemBackgroundBorderless"/>
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="delete"
+                    android:src="@drawable/ic_delete" />
 
             </LinearLayout>
 
