@@ -12,10 +12,12 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.shelfshare.adapters.BookAdapter;
-import com.example.shelfshare.data.BookEntity;
+import com.example.shelfshare.models.Book;
 import com.example.shelfshare.databinding.ActivityBookListBinding;
 import com.example.shelfshare.viewmodels.BookListViewModel;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +25,9 @@ import java.util.List;
 public class BookListActivity extends AppCompatActivity implements BookAdapter.OnBookClickListener {
     private ActivityBookListBinding binding;
     private BookListViewModel viewModel;
+    private RecyclerView recyclerView;
     private BookAdapter adapter;
+    private List<Book> books;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,64 +39,74 @@ public class BookListActivity extends AppCompatActivity implements BookAdapter.O
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle("Available Books");
+            getSupportActionBar().setTitle("All Books");
         }
 
         viewModel = new ViewModelProvider(this).get(BookListViewModel.class);
+        books = new ArrayList<>();
 
         setupRecyclerView();
         setupSearchBar();
-        observeViewModel();
+        loadBooks();
     }
 
     private void setupRecyclerView() {
-        adapter = new BookAdapter(this);
-        binding.rvBooks.setLayoutManager(new LinearLayoutManager(this));
-        binding.rvBooks.setAdapter(adapter);
+        recyclerView = binding.rvBooks;
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        
+        adapter = new BookAdapter(books, this);
+        recyclerView.setAdapter(adapter);
     }
 
     private void setupSearchBar() {
         binding.searchBar.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
-                viewModel.searchBooks(query);
+                filterBooks(query);
                 return true;
             }
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                viewModel.searchBooks(newText);
+                filterBooks(newText);
                 return true;
             }
         });
     }
 
-    private void observeViewModel() {
-        viewModel.getBooks().observe(this, books -> {
-            adapter.submitList(books);
-        });
+    private void loadBooks() {
+        FirebaseFirestore.getInstance()
+                .collection("books")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    books.clear();
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        Book book = document.toObject(Book.class);
+                        books.add(book);
+                    }
+                    adapter.notifyDataSetChanged();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error loading books: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+    }
 
-        viewModel.getIsLoading().observe(this, isLoading -> {
-            binding.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-        });
-
-        viewModel.getError().observe(this, error -> {
-            if (error != null && !error.isEmpty()) {
-                Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
+    private void filterBooks(String query) {
+        List<Book> filteredBooks = new ArrayList<>();
+        for (Book book : books) {
+            if (book.getTitle().toLowerCase().contains(query.toLowerCase()) ||
+                book.getAuthor().toLowerCase().contains(query.toLowerCase())) {
+                filteredBooks.add(book);
             }
-        });
+        }
+        adapter = new BookAdapter(filteredBooks, this);
+        recyclerView.setAdapter(adapter);
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        viewModel.loadBooks();
-    }
-
-    @Override
-    public void onBookClick(BookEntity book) {
+    public void onBookClick(Book book) {
         Intent intent = new Intent(this, BookDetailsActivity.class);
-        intent.putExtra("book_id", book.getId());
+        intent.putExtra("bookId", book.getId());
         startActivity(intent);
     }
 

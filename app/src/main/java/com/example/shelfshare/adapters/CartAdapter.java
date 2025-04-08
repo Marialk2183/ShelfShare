@@ -13,9 +13,12 @@ import com.example.shelfshare.R;
 import com.example.shelfshare.data.BookEntity;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
+import com.example.shelfshare.models.CartItem;
+import java.util.List;
 
 public class CartAdapter extends ListAdapter<BookEntity, CartAdapter.CartViewHolder> {
     private final OnCartItemClickListener listener;
+    private List<CartItem> cartItems;
 
     public CartAdapter(OnCartItemClickListener listener) {
         super(new DiffUtil.ItemCallback<BookEntity>() {

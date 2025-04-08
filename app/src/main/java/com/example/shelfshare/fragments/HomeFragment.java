@@ -4,72 +4,58 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.ViewModelProvider;
-import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
-
+import androidx.recyclerview.widget.RecyclerView;
 import com.example.shelfshare.R;
 import com.example.shelfshare.adapters.BookAdapter;
-import com.example.shelfshare.data.BookEntity;
-import com.example.shelfshare.databinding.FragmentHomeBinding;
-import com.example.shelfshare.viewmodels.BookListViewModel;
+import com.example.shelfshare.models.Book;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import java.util.ArrayList;
+import java.util.List;
 
 public class HomeFragment extends Fragment implements BookAdapter.OnBookClickListener {
-    private FragmentHomeBinding binding;
-    private BookListViewModel viewModel;
+    private RecyclerView recyclerView;
     private BookAdapter adapter;
+    private List<Book> books;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        binding = FragmentHomeBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        View view = inflater.inflate(R.layout.fragment_home, container, false);
+        recyclerView = view.findViewById(R.id.recyclerViewBooks);
+        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        
+        books = new ArrayList<>();
+        adapter = new BookAdapter(books, this);
+        recyclerView.setAdapter(adapter);
+        
+        loadBooks();
+        return view;
+    }
+
+    private void loadBooks() {
+        FirebaseFirestore.getInstance()
+                .collection("books")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    books.clear();
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        Book book = document.toObject(Book.class);
+                        books.add(book);
+                    }
+                    adapter.notifyDataSetChanged();
+                })
+                .addOnFailureListener(e -> {
+                    // Handle error
+                });
     }
 
     @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-
-        // Initialize ViewModel
-        viewModel = new ViewModelProvider(this).get(BookListViewModel.class);
-
-        // Setup RecyclerView
-        adapter = new BookAdapter(this);
-        binding.recyclerViewBooks.setLayoutManager(new LinearLayoutManager(requireContext()));
-        binding.recyclerViewBooks.setAdapter(adapter);
-
-        // Observe books
-        viewModel.getBooks().observe(getViewLifecycleOwner(), books -> {
-            if (books != null) {
-                adapter.submitList(books);
-            }
-        });
-
-        // Observe loading state
-        viewModel.getIsLoading().observe(getViewLifecycleOwner(), isLoading -> {
-            binding.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-        });
-
-        // Load books
-        viewModel.loadBooks();
-    }
-
-    @Override
-    public void onBookClick(BookEntity book) {
-        // Navigate to book details using Bundle
-        Bundle args = new Bundle();
-        args.putString("bookId", book.getId());
-        Navigation.findNavController(requireView())
-                .navigate(R.id.action_homeFragment_to_bookDetailsFragment, args);
-    }
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        binding = null;
+    public void onBookClick(Book book) {
+        // Handle book click
     }
 } 

@@ -42,7 +42,8 @@ dependencies {
     implementation 'com.google.firebase:firebase-storage:20.3.0'
     implementation 'com.github.bumptech.glide:glide:4.16.0'
     implementation 'de.hdodenhof:circleimageview:3.1.0'
-    
+    implementation libs.play.services.maps
+
     // Room components
     def room_version = "2.6.1"
     implementation "androidx.room:room-runtime:$room_version"
@@ -57,6 +58,33 @@ dependencies {
     // Navigation Component
     implementation 'androidx.navigation:navigation-fragment:2.7.7'
     implementation 'androidx.navigation:navigation-ui:2.7.7'
+
+    // OpenStreetMap dependencies
+    implementation('org.osmdroid:osmdroid-android:6.1.18') {
+        exclude group: 'com.j256.ormlite', module: 'ormlite-core'
+        exclude group: 'com.j256.ormlite', module: 'ormlite-android'
+    }
+    implementation('org.osmdroid:osmdroid-wms:6.1.18') {
+        exclude group: 'com.j256.ormlite', module: 'ormlite-core'
+        exclude group: 'com.j256.ormlite', module: 'ormlite-android'
+    }
+    implementation('org.osmdroid:osmdroid-mapsforge:6.1.18') {
+        exclude group: 'com.j256.ormlite', module: 'ormlite-core'
+        exclude group: 'com.j256.ormlite', module: 'ormlite-android'
+    }
+    implementation('org.osmdroid:osmdroid-geopackage:6.1.18') {
+        exclude group: 'com.j256.ormlite', module: 'ormlite-core'
+        exclude group: 'com.j256.ormlite', module: 'ormlite-android'
+    }
+    
+    // Add explicit ORMLite dependency
+    implementation 'com.j256.ormlite:ormlite-android:6.1'
+    
+    // Location services
+    implementation 'com.google.android.gms:play-services-location:21.2.0'
+    
+    // Razorpay
+    implementation 'com.razorpay:checkout:1.6.33'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

@@ -38,7 +38,7 @@ public class RentalActivity extends AppCompatActivity implements RentalAdapter.O
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        adapter = new RentalAdapter(new ArrayList<>(), this);
+        adapter = new RentalAdapter(this);
         recyclerView.setAdapter(adapter);
 
         viewModel = new ViewModelProvider(this).get(RentalViewModel.class);
@@ -47,7 +47,7 @@ public class RentalActivity extends AppCompatActivity implements RentalAdapter.O
 
     private void observeViewModel() {
         viewModel.getRentals().observe(this, rentals -> {
-            adapter.updateRentals(rentals);
+            adapter.submitList(rentals);
         });
 
         viewModel.getIsLoading().observe(this, isLoading -> {

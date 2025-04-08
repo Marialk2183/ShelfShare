@@ -5,15 +5,15 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.shelfshare.R;
 import com.example.shelfshare.data.Rental;
 import java.text.SimpleDateFormat;
-import java.util.List;
 import java.util.Locale;
 
-public class RentalAdapter extends RecyclerView.Adapter<RentalAdapter.RentalViewHolder> {
-    private List<Rental> rentals;
+public class RentalAdapter extends ListAdapter<Rental, RentalAdapter.RentalViewHolder> {
     private final OnRentalClickListener listener;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy", Locale.getDefault());
 
@@ -21,8 +21,18 @@ public class RentalAdapter extends RecyclerView.Adapter<RentalAdapter.RentalView
         void onRentalClick(Rental rental);
     }
 
-    public RentalAdapter(List<Rental> rentals, OnRentalClickListener listener) {
-        this.rentals = rentals;
+    public RentalAdapter(OnRentalClickListener listener) {
+        super(new DiffUtil.ItemCallback<Rental>() {
+            @Override
+            public boolean areItemsTheSame(@NonNull Rental oldItem, @NonNull Rental newItem) {
+                return oldItem.getId().equals(newItem.getId());
+            }
+
+            @Override
+            public boolean areContentsTheSame(@NonNull Rental oldItem, @NonNull Rental newItem) {
+                return oldItem.getId().equals(newItem.getId());
+            }
+        });
         this.listener = listener;
     }
 
@@ -36,18 +46,8 @@ public class RentalAdapter extends RecyclerView.Adapter<RentalAdapter.RentalView
 
     @Override
     public void onBindViewHolder(@NonNull RentalViewHolder holder, int position) {
-        Rental rental = rentals.get(position);
+        Rental rental = getItem(position);
         holder.bind(rental);
-    }
-
-    @Override
-    public int getItemCount() {
-        return rentals != null ? rentals.size() : 0;
-    }
-
-    public void updateRentals(List<Rental> newRentals) {
-        this.rentals = newRentals;
-        notifyDataSetChanged();
     }
 
     class RentalViewHolder extends RecyclerView.ViewHolder {
