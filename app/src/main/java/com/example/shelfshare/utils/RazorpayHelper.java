@@ -11,28 +11,33 @@ public class RazorpayHelper implements PaymentResultListener {
     private final Activity activity;
     private final PaymentCallback callback;
     private final String razorpayKey;
+    private final double amount;
+    private final String orderId;
 
     public interface PaymentCallback {
         void onPaymentSuccess(String paymentId);
         void onPaymentError(int code, String response);
+        void onPaymentError(String error);
     }
 
-    public RazorpayHelper(Activity activity, PaymentCallback callback) {
+    public RazorpayHelper(Activity activity, double amount, String orderId, PaymentCallback callback) {
         this.activity = activity;
         this.callback = callback;
+        this.amount = amount;
+        this.orderId = orderId;
         this.razorpayKey = "YOUR_RAZORPAY_KEY"; // Replace with your actual Razorpay key
     }
 
-    public void startPayment(String amount, String currency, String description) {
+    public void startPayment() {
         Checkout checkout = new Checkout();
         checkout.setKeyID(razorpayKey);
 
         try {
             JSONObject options = new JSONObject();
             options.put("name", "ShelfShare");
-            options.put("description", description);
-            options.put("currency", currency);
-            options.put("amount", Integer.parseInt(amount) * 100); // Convert to paise
+            options.put("description", "Order #" + orderId);
+            options.put("currency", "USD");
+            options.put("amount", (int)(amount * 100)); // Convert to paise
             options.put("prefill.email", "user@example.com");
             options.put("prefill.contact", "9876543210");
 

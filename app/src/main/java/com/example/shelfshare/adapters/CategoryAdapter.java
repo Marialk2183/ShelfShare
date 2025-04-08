@@ -13,10 +13,14 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.shelfshare.R;
-import com.example.shelfshare.models.Category;
+import com.example.shelfshare.data.Category;
 
 public class CategoryAdapter extends ListAdapter<Category, CategoryAdapter.CategoryViewHolder> {
     private final OnCategoryClickListener listener;
+
+    public interface OnCategoryClickListener {
+        void onCategoryClick(Category category);
+    }
 
     public CategoryAdapter(OnCategoryClickListener listener) {
         super(new DiffUtil.ItemCallback<Category>() {
@@ -27,7 +31,9 @@ public class CategoryAdapter extends ListAdapter<Category, CategoryAdapter.Categ
 
             @Override
             public boolean areContentsTheSame(@NonNull Category oldItem, @NonNull Category newItem) {
-                return oldItem.equals(newItem);
+                return oldItem.getName().equals(newItem.getName()) &&
+                       oldItem.getImageUrl().equals(newItem.getImageUrl()) &&
+                       oldItem.getBookCount() == newItem.getBookCount();
             }
         });
         this.listener = listener;
@@ -48,32 +54,32 @@ public class CategoryAdapter extends ListAdapter<Category, CategoryAdapter.Categ
     }
 
     static class CategoryViewHolder extends RecyclerView.ViewHolder {
-        private final ImageView ivCategory;
-        private final TextView tvCategoryName;
-        private final TextView tvBookCount;
+        private final ImageView imageView;
+        private final TextView nameTextView;
+        private final TextView countTextView;
 
         public CategoryViewHolder(@NonNull View itemView) {
             super(itemView);
-            ivCategory = itemView.findViewById(R.id.ivCategory);
-            tvCategoryName = itemView.findViewById(R.id.tvCategoryName);
-            tvBookCount = itemView.findViewById(R.id.tvBookCount);
+            imageView = itemView.findViewById(R.id.categoryImage);
+            nameTextView = itemView.findViewById(R.id.categoryName);
+            countTextView = itemView.findViewById(R.id.bookCount);
         }
 
         public void bind(Category category, OnCategoryClickListener listener) {
-            tvCategoryName.setText(category.getName());
-            tvBookCount.setText(String.valueOf(category.getBookCount()));
-
-            // Load category image
-            Glide.with(itemView.getContext())
+            nameTextView.setText(category.getName());
+            countTextView.setText(category.getBookCount() + " Books");
+            
+            if (category.getImageUrl() != null && !category.getImageUrl().isEmpty()) {
+                Glide.with(itemView.getContext())
                     .load(category.getImageUrl())
-                    .placeholder(R.drawable.ic_category_placeholder)
-                    .into(ivCategory);
+                    .placeholder(R.drawable.placeholder_category)
+                    .error(R.drawable.error_category)
+                    .into(imageView);
+            } else {
+                imageView.setImageResource(R.drawable.placeholder_category);
+            }
 
             itemView.setOnClickListener(v -> listener.onCategoryClick(category));
         }
-    }
-
-    public interface OnCategoryClickListener {
-        void onCategoryClick(Category category);
     }
 } 

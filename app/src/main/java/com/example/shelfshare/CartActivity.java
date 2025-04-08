@@ -1,84 +1,111 @@
 package com.example.shelfshare;
 
-import android.content.Intent;
 import android.os.Bundle;
-import android.widget.TextView;
+import android.view.MenuItem;
+import android.view.View;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 import com.example.shelfshare.adapters.CartAdapter;
+import com.example.shelfshare.databinding.ActivityCartBinding;
 import com.example.shelfshare.data.BookEntity;
 import com.example.shelfshare.viewmodels.CartViewModel;
-import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.button.MaterialButton;
+import androidx.appcompat.widget.Toolbar;
+import java.util.ArrayList;
+import java.util.List;
 
-public class CartActivity extends AppCompatActivity {
-    private CartViewModel viewModel;
-    private RecyclerView rvCart;
-    private TextView tvTotal;
-    private MaterialButton btnCheckout;
+public class CartActivity extends AppCompatActivity implements CartAdapter.OnCartItemClickListener {
+    private ActivityCartBinding binding;
+    private CartViewModel cartViewModel;
     private CartAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_cart);
+        binding = ActivityCartBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         setupToolbar();
-        setupViews();
+        setupRecyclerView();
         setupViewModel();
+        setupCheckoutButton();
     }
 
     private void setupToolbar() {
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        Toolbar toolbar = binding.toolbar;
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
-            getSupportActionBar().setTitle("Shopping Cart");
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle("Shopping Cart");
         }
     }
 
-    private void setupViews() {
-        rvCart = findViewById(R.id.rv_cart);
-        tvTotal = findViewById(R.id.tv_total);
-        btnCheckout = findViewById(R.id.btn_checkout);
-
-        rvCart.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new CartAdapter(book -> viewModel.removeFromCart(book));
-        rvCart.setAdapter(adapter);
-
-        btnCheckout.setOnClickListener(v -> {
-            if (viewModel.getCartItems().getValue() != null && !viewModel.getCartItems().getValue().isEmpty()) {
-                startActivity(new Intent(this, CheckoutActivity.class));
-            } else {
-                Toast.makeText(this, "Your cart is empty", Toast.LENGTH_SHORT).show();
-            }
-        });
+    private void setupRecyclerView() {
+        cartViewModel = new ViewModelProvider(this).get(CartViewModel.class);
+        adapter = new CartAdapter(this);
+        
+        binding.rvCartItems.setLayoutManager(new LinearLayoutManager(this));
+        binding.rvCartItems.setAdapter(adapter);
     }
 
     private void setupViewModel() {
-        viewModel = new ViewModelProvider(this).get(CartViewModel.class);
-        viewModel.getCartItems().observe(this, cartItems -> {
-            adapter.submitList(cartItems);
-            updateTotal();
+        cartViewModel.getCartItems().observe(this, items -> {
+            adapter.submitList(items);
+            binding.emptyState.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
+            binding.rvCartItems.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
         });
-        viewModel.getError().observe(this, error -> {
-            if (error != null) {
+
+        cartViewModel.getTotalPrice().observe(this, total -> {
+            binding.tvTotalPrice.setText(String.format("Total: ₹%.2f", total));
+        });
+
+        cartViewModel.getIsLoading().observe(this, isLoading -> {
+            binding.progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+        });
+
+        cartViewModel.getError().observe(this, error -> {
+            if (error != null && !error.isEmpty()) {
                 Toast.makeText(this, error, Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private void updateTotal() {
-        double total = viewModel.calculateTotal();
-        tvTotal.setText(String.format("Total: $%.2f", total));
+    private void setupCheckoutButton() {
+        binding.btnCheckout.setOnClickListener(v -> {
+            if (cartViewModel.getCartItems().getValue() == null || 
+                cartViewModel.getCartItems().getValue().isEmpty()) {
+                Toast.makeText(this, "Cart is empty", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            // Implement checkout logic here
+            Toast.makeText(this, "Proceeding to checkout...", Toast.LENGTH_SHORT).show();
+        });
     }
 
     @Override
-    public boolean onSupportNavigateUp() {
-        onBackPressed();
-        return true;
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            onBackPressed();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onCartItemClick(BookEntity book) {
+        // TODO: Navigate to book details
+        Toast.makeText(this, "Book details: " + book.getTitle(), Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onRemoveClick(BookEntity book) {
+        cartViewModel.removeFromCart(book);
+        Toast.makeText(this, "Removed from cart", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onQuantityChanged(BookEntity book, int newQuantity) {
+        cartViewModel.updateQuantity(book, newQuantity);
     }
 } 

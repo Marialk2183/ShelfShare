@@ -105,6 +105,16 @@
             android:theme="@style/Theme.ShelfShare.NoActionBar" />
 
         <activity
+            android:name=".RentalActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ShelfShare.NoActionBar" />
+
+        <activity
+            android:name=".LocationSelectionActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ShelfShare.NoActionBar" />
+
+        <activity
             android:name="com.razorpay.CheckoutActivity"
             android:exported="false"
             android:theme="@style/CheckoutTheme"

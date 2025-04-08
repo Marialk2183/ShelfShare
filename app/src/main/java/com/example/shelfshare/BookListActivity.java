@@ -9,12 +9,15 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.shelfshare.adapters.BookAdapter;
+import com.example.shelfshare.data.BookEntity;
 import com.example.shelfshare.models.Book;
 import com.example.shelfshare.databinding.ActivityBookListBinding;
 import com.example.shelfshare.viewmodels.BookListViewModel;
+import com.example.shelfshare.viewmodels.CartViewModel;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -25,9 +28,8 @@ import java.util.List;
 public class BookListActivity extends AppCompatActivity implements BookAdapter.OnBookClickListener {
     private ActivityBookListBinding binding;
     private BookListViewModel viewModel;
-    private RecyclerView recyclerView;
     private BookAdapter adapter;
-    private List<Book> books;
+    private CartViewModel cartViewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,27 +37,30 @@ public class BookListActivity extends AppCompatActivity implements BookAdapter.O
         binding = ActivityBookListBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        MaterialToolbar toolbar = binding.toolbar;
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle("All Books");
-        }
-
-        viewModel = new ViewModelProvider(this).get(BookListViewModel.class);
-        books = new ArrayList<>();
-
+        setupToolbar();
+        setupViewModels();
         setupRecyclerView();
         setupSearchBar();
         loadBooks();
     }
 
+    private void setupToolbar() {
+        setSupportActionBar(binding.toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setTitle("All Books");
+        }
+    }
+
+    private void setupViewModels() {
+        viewModel = new ViewModelProvider(this).get(BookListViewModel.class);
+        cartViewModel = new ViewModelProvider(this).get(CartViewModel.class);
+    }
+
     private void setupRecyclerView() {
-        recyclerView = binding.rvBooks;
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        
-        adapter = new BookAdapter(books, this);
-        recyclerView.setAdapter(adapter);
+        adapter = new BookAdapter(this);
+        binding.rvBooks.setLayoutManager(new GridLayoutManager(this, 2));
+        binding.rvBooks.setAdapter(adapter);
     }
 
     private void setupSearchBar() {
@@ -75,47 +80,89 @@ public class BookListActivity extends AppCompatActivity implements BookAdapter.O
     }
 
     private void loadBooks() {
+        // Show loading indicator if you have one
+        binding.progressBar.setVisibility(View.VISIBLE);
+
         FirebaseFirestore.getInstance()
-                .collection("books")
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    books.clear();
-                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
-                        Book book = document.toObject(Book.class);
+            .collection("books")
+            .get()
+            .addOnCompleteListener(task -> {
+                binding.progressBar.setVisibility(View.GONE);
+                
+                if (task.isSuccessful() && task.getResult() != null) {
+                    List<BookEntity> books = new ArrayList<>();
+                    for (QueryDocumentSnapshot document : task.getResult()) {
+                        // Convert Firestore document to BookEntity
+                        BookEntity book = new BookEntity();
+                        book.setId(document.getId());
+                        book.setTitle(document.getString("title"));
+                        book.setAuthor(document.getString("author"));
+                        book.setImageUrl(document.getString("imageUrl"));
+                        book.setPrice(document.getDouble("price") != null ? 
+                            document.getDouble("price") : 0.0);
                         books.add(book);
                     }
-                    adapter.notifyDataSetChanged();
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Error loading books: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+                    adapter.updateBooks(books);
+                } else {
+                    String error = task.getException() != null ? 
+                        task.getException().getMessage() : "Unknown error";
+                    Toast.makeText(this, "Error loading books: " + error, 
+                        Toast.LENGTH_SHORT).show();
+                }
+            });
     }
 
     private void filterBooks(String query) {
-        List<Book> filteredBooks = new ArrayList<>();
-        for (Book book : books) {
-            if (book.getTitle().toLowerCase().contains(query.toLowerCase()) ||
-                book.getAuthor().toLowerCase().contains(query.toLowerCase())) {
-                filteredBooks.add(book);
+        if (query == null || query.isEmpty()) {
+            // If query is empty, restore original list
+            loadBooks();
+            return;
+        }
+
+        List<BookEntity> allBooks = adapter.getBooks();
+        List<BookEntity> filteredList = new ArrayList<>();
+        
+        String lowercaseQuery = query.toLowerCase().trim();
+        for (BookEntity book : allBooks) {
+            if (book.getTitle().toLowerCase().contains(lowercaseQuery) ||
+                book.getAuthor().toLowerCase().contains(lowercaseQuery)) {
+                filteredList.add(book);
             }
         }
-        adapter = new BookAdapter(filteredBooks, this);
-        recyclerView.setAdapter(adapter);
+        adapter.updateBooks(filteredList);
     }
 
     @Override
-    public void onBookClick(Book book) {
+    public void onBookClick(BookEntity book) {
         Intent intent = new Intent(this, BookDetailsActivity.class);
-        intent.putExtra("bookId", book.getId());
+        intent.putExtra("book_id", book.getId());
         startActivity(intent);
+    }
+
+    @Override
+    public void onAddToCartClick(BookEntity book) {
+        cartViewModel.addToCart(book);
+        Toast.makeText(this, "Added to cart", Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
-            onBackPressed();
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                    () -> finish()
+                );
+            } else {
+                onBackPressed();
+            }
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
-} 
+
+    @Override
+    public void onPointerCaptureChanged(boolean hasCapture) {
+        super.onPointerCaptureChanged(hasCapture);
+    }
+}

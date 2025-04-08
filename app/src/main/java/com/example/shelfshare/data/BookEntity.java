@@ -40,6 +40,21 @@ public class BookEntity {
     }
 
     @Ignore
+    public BookEntity(String id, String title, String author, String location, double price, boolean available, String imageUrl) {
+        this.id = id;
+        this.title = title;
+        this.author = author;
+        this.location = location;
+        this.price = price;
+        this.available = available;
+        this.imageUrl = imageUrl;
+        this.isFavorite = false;
+        this.quantity = 1;
+        this.createdAt = new Date();
+        this.updatedAt = new Date();
+    }
+
+    @Ignore
     public BookEntity(String title, String author, String description, double price,
                      String coverImageUrl, String categoryId, String ownerId, String location) {
         this.id = "";

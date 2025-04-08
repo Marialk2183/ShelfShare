@@ -3,7 +3,6 @@ package com.example.shelfshare;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ProgressBar;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
@@ -15,17 +14,25 @@ import com.example.shelfshare.data.Rental;
 import com.example.shelfshare.dialogs.RentalConfirmationDialog;
 import com.example.shelfshare.viewmodels.RentalViewModel;
 import com.google.android.material.appbar.MaterialToolbar;
-import java.util.ArrayList;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 public class RentalActivity extends AppCompatActivity implements RentalAdapter.OnRentalClickListener, RentalConfirmationDialog.OnRentalConfirmedListener {
     private RentalViewModel viewModel;
     private RentalAdapter adapter;
-    private ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_rental);
+
+        // Check if user is logged in
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            Toast.makeText(this, "Please log in to view rentals", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -34,7 +41,7 @@ public class RentalActivity extends AppCompatActivity implements RentalAdapter.O
             getSupportActionBar().setTitle("My Rentals");
         }
 
-        progressBar = findViewById(R.id.progressBar);
+        View progressBar = findViewById(R.id.progressBar);
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
@@ -51,7 +58,7 @@ public class RentalActivity extends AppCompatActivity implements RentalAdapter.O
         });
 
         viewModel.getIsLoading().observe(this, isLoading -> {
-            progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+            findViewById(R.id.progressBar).setVisibility(isLoading ? View.VISIBLE : View.GONE);
         });
 
         viewModel.getError().observe(this, error -> {

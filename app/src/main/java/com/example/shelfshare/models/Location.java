@@ -4,17 +4,14 @@ public class Location {
     private String id;
     private String name;
     private String address;
-    private double latitude;
-    private double longitude;
 
+    // Required empty constructor for Firebase
     public Location() {}
 
-    public Location(String id, String name, String address, double latitude, double longitude) {
+    public Location(String id, String name, String address) {
         this.id = id;
         this.name = name;
         this.address = address;
-        this.latitude = latitude;
-        this.longitude = longitude;
     }
 
     public String getId() {
@@ -39,21 +36,5 @@ public class Location {
 
     public void setAddress(String address) {
         this.address = address;
-    }
-
-    public double getLatitude() {
-        return latitude;
-    }
-
-    public void setLatitude(double latitude) {
-        this.latitude = latitude;
-    }
-
-    public double getLongitude() {
-        return longitude;
-    }
-
-    public void setLongitude(double longitude) {
-        this.longitude = longitude;
     }
 } 
