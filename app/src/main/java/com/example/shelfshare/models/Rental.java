@@ -7,7 +7,10 @@ import java.util.Date;
 @IgnoreExtraProperties
 public class Rental {
     private String id;
-    private String bookId;
+    private String title;
+    private String author;
+    private String imageUrl;
+    private String dueDate;
     private String userId;
     private Date startDate;
     private Date endDate;
@@ -17,16 +20,16 @@ public class Rental {
     private double lateFee;
 
     public Rental() {
-        // Default constructor required for Firestore
+        // Required empty constructor for Firestore
     }
 
-    public Rental(String bookId, String userId, Date startDate, Date endDate, double totalAmount) {
-        this.bookId = bookId;
+    public Rental(String id, String title, String author, String imageUrl, String dueDate, String userId) {
+        this.id = id;
+        this.title = title;
+        this.author = author;
+        this.imageUrl = imageUrl;
+        this.dueDate = dueDate;
         this.userId = userId;
-        this.startDate = startDate;
-        this.endDate = endDate;
-        this.totalAmount = totalAmount;
-        this.status = "PENDING";
     }
 
     @Exclude
@@ -38,12 +41,36 @@ public class Rental {
         this.id = id;
     }
 
-    public String getBookId() {
-        return bookId;
+    public String getTitle() {
+        return title;
     }
 
-    public void setBookId(String bookId) {
-        this.bookId = bookId;
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(String author) {
+        this.author = author;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(String dueDate) {
+        this.dueDate = dueDate;
     }
 
     public String getUserId() {

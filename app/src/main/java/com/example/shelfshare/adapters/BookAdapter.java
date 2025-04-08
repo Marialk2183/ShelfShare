@@ -6,35 +6,22 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.DiffUtil;
-import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.shelfshare.R;
-import com.example.shelfshare.data.BookEntity;
-
-import java.util.ArrayList;
+import com.example.shelfshare.models.Book;
 import java.util.List;
 
-public class BookAdapter extends ListAdapter<BookEntity, BookAdapter.BookViewHolder> {
-    private final OnBookClickListener listener;
+public class BookAdapter extends RecyclerView.Adapter<BookAdapter.BookViewHolder> {
+    private List<Book> books;
+    private OnBookClickListener listener;
 
     public interface OnBookClickListener {
-        void onBookClick(BookEntity book);
+        void onBookClick(Book book);
     }
 
-    public BookAdapter(OnBookClickListener listener) {
-        super(new DiffUtil.ItemCallback<BookEntity>() {
-            @Override
-            public boolean areItemsTheSame(@NonNull BookEntity oldItem, @NonNull BookEntity newItem) {
-                return oldItem == newItem;
-            }
-
-            @Override
-            public boolean areContentsTheSame(@NonNull BookEntity oldItem, @NonNull BookEntity newItem) {
-                return oldItem.getId().equals(newItem.getId());
-            }
-        });
+    public BookAdapter(List<Book> books, OnBookClickListener listener) {
+        this.books = books;
         this.listener = listener;
     }
 
@@ -48,27 +35,42 @@ public class BookAdapter extends ListAdapter<BookEntity, BookAdapter.BookViewHol
 
     @Override
     public void onBindViewHolder(@NonNull BookViewHolder holder, int position) {
-        BookEntity book = getItem(position);
-        holder.titleTextView.setText(book.getTitle());
-        holder.authorTextView.setText(book.getAuthor());
-        holder.priceTextView.setText(String.format("$%.2f/day", book.getPrice()));
-        holder.availabilityTextView.setText(book.isAvailable() ? "Available" : "Not Available");
+        Book book = books.get(position);
+        holder.tvTitle.setText(book.getTitle());
+        holder.tvAuthor.setText(book.getAuthor());
+        holder.tvPrice.setText(String.format("$%.2f", book.getPrice()));
+        holder.tvAvailability.setText(book.isAvailable() ? "Available" : "Not Available");
         
-        holder.itemView.setOnClickListener(v -> listener.onBookClick(book));
+        Glide.with(holder.itemView.getContext())
+                .load(book.getImageUrl())
+                .into(holder.ivBook);
+
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onBookClick(book);
+            }
+        });
+    }
+
+    @Override
+    public int getItemCount() {
+        return books.size();
     }
 
     static class BookViewHolder extends RecyclerView.ViewHolder {
-        TextView titleTextView;
-        TextView authorTextView;
-        TextView priceTextView;
-        TextView availabilityTextView;
+        ImageView ivBook;
+        TextView tvTitle;
+        TextView tvAuthor;
+        TextView tvPrice;
+        TextView tvAvailability;
 
-        BookViewHolder(View itemView) {
+        BookViewHolder(@NonNull View itemView) {
             super(itemView);
-            titleTextView = itemView.findViewById(R.id.textBookTitle);
-            authorTextView = itemView.findViewById(R.id.textBookAuthor);
-            priceTextView = itemView.findViewById(R.id.textBookPrice);
-            availabilityTextView = itemView.findViewById(R.id.textBookAvailability);
+            ivBook = itemView.findViewById(R.id.iv_book);
+            tvTitle = itemView.findViewById(R.id.textBookTitle);
+            tvAuthor = itemView.findViewById(R.id.textBookAuthor);
+            tvPrice = itemView.findViewById(R.id.textBookPrice);
+            tvAvailability = itemView.findViewById(R.id.textBookAvailability);
         }
     }
 } 

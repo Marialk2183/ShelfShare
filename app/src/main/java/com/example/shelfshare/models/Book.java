@@ -24,20 +24,17 @@ public class Book {
     private Date updatedAt;
 
     public Book() {
-        // Default constructor required for Firestore
+        // Required empty constructor for Firestore
     }
 
-    public Book(String title, String author, String description, String imageUrl, 
-                String category, String location, double price, double deposit) {
+    public Book(String id, String title, String author, double price, String imageUrl, String description, boolean available) {
+        this.id = id;
         this.title = title;
         this.author = author;
-        this.description = description;
-        this.imageUrl = imageUrl;
-        this.category = category;
-        this.location = location;
         this.price = price;
-        this.deposit = deposit;
-        this.isAvailable = true;
+        this.imageUrl = imageUrl;
+        this.description = description;
+        this.isAvailable = available;
         this.createdAt = new Date();
         this.updatedAt = new Date();
     }
