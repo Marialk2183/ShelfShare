@@ -89,7 +89,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void navigateToMain() {
-        startActivity(new Intent(this, AddBookActivity.class));
+        startActivity(new Intent(this, MainActivity.class));
         finish();
     }
 }

@@ -27,12 +27,12 @@ public class BookAdapter extends ListAdapter<BookEntity, BookAdapter.BookViewHol
         super(new DiffUtil.ItemCallback<BookEntity>() {
             @Override
             public boolean areItemsTheSame(@NonNull BookEntity oldItem, @NonNull BookEntity newItem) {
-                return oldItem.getId().equals(newItem.getId());
+                return oldItem == newItem;
             }
 
             @Override
             public boolean areContentsTheSame(@NonNull BookEntity oldItem, @NonNull BookEntity newItem) {
-                return oldItem.equals(newItem);
+                return oldItem.getId().equals(newItem.getId());
             }
         });
         this.listener = listener;
