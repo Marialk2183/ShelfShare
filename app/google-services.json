@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "844505926052",
+    "project_id": "selfshare-dbfde",
+    "storage_bucket": "selfshare-dbfde.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:844505926052:android:3c87b35f092c5908f59931",
+        "android_client_info": {
+          "package_name": "com.example.shelfshare"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBx2Us1OGvptJDeJewWIfR0u8qcq8dkUMI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
