@@ -3,67 +3,51 @@ package com.example.shelfshare.viewmodels;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
-
-import com.example.shelfshare.data.Location;
-import com.example.shelfshare.repositories.LocationRepository;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.QuerySnapshot;
-
-import java.util.List;
+import com.example.shelfshare.models.Location;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
+import java.util.List;
 
 public class LocationViewModel extends ViewModel {
-    private final LocationRepository repository;
     private final MutableLiveData<List<Location>> locations = new MutableLiveData<>();
     private final MutableLiveData<Location> currentLocation = new MutableLiveData<>();
-    private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
-    private final MutableLiveData<String> error = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>();
+    private final FirebaseFirestore db;
 
     public LocationViewModel() {
-        repository = new LocationRepository();
+        db = FirebaseFirestore.getInstance();
     }
 
     public void loadLocations() {
         isLoading.setValue(true);
-        repository.getAllLocations()
+        db.collection("locations")
             .get()
-            .addOnSuccessListener(querySnapshot -> {
+            .addOnSuccessListener(queryDocumentSnapshots -> {
                 List<Location> locationList = new ArrayList<>();
-                for (var document : querySnapshot.getDocuments()) {
+                for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
                     Location location = document.toObject(Location.class);
-                    if (location != null) {
-                        location.setId(document.getId());
-                        locationList.add(location);
-                    }
+                    location.setId(document.getId());
+                    locationList.add(location);
                 }
                 locations.setValue(locationList);
                 isLoading.setValue(false);
             })
             .addOnFailureListener(e -> {
-                error.setValue(e.getMessage());
+                // Handle error
                 isLoading.setValue(false);
             });
     }
 
-    public Task<DocumentReference> addLocation(Location location) {
-        return repository.addLocation(location);
-    }
-
-    public Task<Void> updateLocation(String locationId, Location location) {
-        return repository.updateLocation(locationId, location);
-    }
-
-    public Task<Void> deleteLocation(String locationId) {
-        return repository.deleteLocation(locationId);
-    }
-
-    public void setCurrentLocation(Location location) {
-        currentLocation.setValue(location);
-    }
-
     public void selectLocation(Location location) {
         currentLocation.setValue(location);
+        // Save selected location to SharedPreferences or Firebase
+        saveSelectedLocation(location);
+    }
+
+    private void saveSelectedLocation(Location location) {
+        // Save to SharedPreferences or Firebase user data
+        // This is just a placeholder - implement actual storage logic
     }
 
     public LiveData<List<Location>> getLocations() {
@@ -76,9 +60,5 @@ public class LocationViewModel extends ViewModel {
 
     public LiveData<Boolean> getIsLoading() {
         return isLoading;
-    }
-
-    public LiveData<String> getError() {
-        return error;
     }
 } 

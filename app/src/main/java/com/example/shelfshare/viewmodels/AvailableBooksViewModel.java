@@ -12,7 +12,8 @@ import com.google.firebase.firestore.QuerySnapshot;
 
 public class AvailableBooksViewModel extends ViewModel {
     private final BookRepository repository;
-    private final MutableLiveData<List<BookEntity>> books = new MutableLiveData<>();
+    private final MutableLiveData<List<BookEntity>> availableBooks = new MutableLiveData<>(new ArrayList<>());
+    private final MutableLiveData<List<BookEntity>> favoriteBooks = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
     private final MutableLiveData<String> error = new MutableLiveData<>();
 
@@ -33,7 +34,7 @@ public class AvailableBooksViewModel extends ViewModel {
                         bookList.add(book);
                     }
                 }
-                books.setValue(bookList);
+                availableBooks.setValue(bookList);
                 isLoading.setValue(false);
             })
             .addOnFailureListener(e -> {
@@ -55,7 +56,7 @@ public class AvailableBooksViewModel extends ViewModel {
                         bookList.add(book);
                     }
                 }
-                books.setValue(bookList);
+                availableBooks.setValue(bookList);
                 isLoading.setValue(false);
             })
             .addOnFailureListener(e -> {
@@ -64,8 +65,12 @@ public class AvailableBooksViewModel extends ViewModel {
             });
     }
 
-    public LiveData<List<BookEntity>> getBooks() {
-        return books;
+    public LiveData<List<BookEntity>> getAvailableBooks() {
+        return availableBooks;
+    }
+
+    public LiveData<List<BookEntity>> getFavoriteBooks() {
+        return favoriteBooks;
     }
 
     public LiveData<Boolean> getIsLoading() {
@@ -81,7 +86,17 @@ public class AvailableBooksViewModel extends ViewModel {
     }
 
     public Task<Void> insertAll(List<BookEntity> books) {
-        return repository.insertAll(books);
+        // Add books to the repository
+        Task<Void> task = repository.insertAll(books);
+        
+        // Also update the local LiveData
+        List<BookEntity> currentBooks = availableBooks.getValue();
+        if (currentBooks != null) {
+            currentBooks.addAll(books);
+            availableBooks.setValue(currentBooks);
+        }
+        
+        return task;
     }
 
     public Task<Void> update(BookEntity book) {
@@ -94,5 +109,31 @@ public class AvailableBooksViewModel extends ViewModel {
 
     public Task<Void> updateAvailability(String bookId, boolean available) {
         return repository.updateAvailability(bookId, available);
+    }
+
+    public void toggleFavorite(BookEntity book) {
+        book.setFavorite(!book.isFavorite());
+        
+        List<BookEntity> currentFavorites = favoriteBooks.getValue();
+        if (currentFavorites != null) {
+            if (book.isFavorite()) {
+                if (!currentFavorites.contains(book)) {
+                    currentFavorites.add(book);
+                }
+            } else {
+                currentFavorites.remove(book);
+            }
+            favoriteBooks.setValue(currentFavorites);
+        }
+        
+        // Update the book in the available books list
+        List<BookEntity> currentBooks = availableBooks.getValue();
+        if (currentBooks != null) {
+            int index = currentBooks.indexOf(book);
+            if (index != -1) {
+                currentBooks.set(index, book);
+                availableBooks.setValue(currentBooks);
+            }
+        }
     }
 } 

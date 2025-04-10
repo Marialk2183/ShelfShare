@@ -65,7 +65,7 @@
             android:theme="@style/Theme.ShelfShare.NoActionBar" />
 
         <activity
-            android:name=".BookDetailsActivity"
+            android:name=".BookDetailActivity"
             android:exported="false"
             android:theme="@style/Theme.ShelfShare.NoActionBar" />
 
@@ -101,6 +101,16 @@
 
         <activity
             android:name=".CartActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ShelfShare.NoActionBar" />
+
+        <activity
+            android:name=".RentalActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ShelfShare.NoActionBar" />
+
+        <activity
+            android:name=".LocationSelectionActivity"
             android:exported="false"
             android:theme="@style/Theme.ShelfShare.NoActionBar" />
 

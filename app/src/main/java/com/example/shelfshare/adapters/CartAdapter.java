@@ -81,8 +81,11 @@ public class CartAdapter extends ListAdapter<BookEntity, CartAdapter.CartViewHol
         }
     }
 
-    @FunctionalInterface
     public interface OnCartItemClickListener {
         void onCartItemClick(BookEntity book);
+
+        void onRemoveClick(BookEntity book);
+
+        void onQuantityChanged(BookEntity book, int newQuantity);
     }
 } 

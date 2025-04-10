@@ -19,14 +19,18 @@ import java.util.Date;
 import java.util.Map;
 import java.util.HashMap;
 import com.example.shelfshare.data.BookEntity;
+import com.example.shelfshare.models.Book;
 
 public class BookRepository {
     private final CollectionReference booksRef;
     private final MutableLiveData<List<BookEntity>> books = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
+    private final FirebaseFirestore db;
+    private static final String COLLECTION_BOOKS = "books";
 
     public BookRepository() {
         this.booksRef = FirebaseFirestore.getInstance().collection("books");
+        db = FirebaseFirestore.getInstance();
     }
 
     public LiveData<List<BookEntity>> getAllBooks() {
@@ -119,5 +123,93 @@ public class BookRepository {
 
     public Task<Void> updateAvailability(String bookId, boolean available) {
         return booksRef.document(bookId).update("available", available);
+    }
+//
+//    public Query getBooksByCategory(String category) {
+//        if (category.equals("All")) {
+//            return db.collection(COLLECTION_BOOKS);
+//        }
+//        return db.collection(COLLECTION_BOOKS)
+//                .whereEqualTo("category", category);
+//    }
+
+    public Query getBooksByLocationAndCategory(String locationId, String category) {
+        Query query = db.collection(COLLECTION_BOOKS)
+                .whereEqualTo("locationId", locationId);
+        
+        if (!category.equals("All")) {
+            query = query.whereEqualTo("category", category);
+        }
+        
+        return query;
+    }
+
+    public void getBooksByCategory(String category, OnBooksFetchedListener listener) {
+        if (category.equals("All")) {
+            db.collection(COLLECTION_BOOKS)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<Book> books = new ArrayList<>();
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        Book book = document.toObject(Book.class);
+                        book.setId(document.getId());
+                        books.add(book);
+                    }
+                    listener.onBooksFetched(books);
+                })
+                .addOnFailureListener(listener::onError);
+        } else {
+            db.collection(COLLECTION_BOOKS)
+                .whereEqualTo("category", category)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<Book> books = new ArrayList<>();
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        Book book = document.toObject(Book.class);
+                        book.setId(document.getId());
+                        books.add(book);
+                    }
+                    listener.onBooksFetched(books);
+                })
+                .addOnFailureListener(listener::onError);
+        }
+    }
+
+    public void getBooksByLocationAndCategory(String location, String category, OnBooksFetchedListener listener) {
+        if (category.equals("All")) {
+            db.collection(COLLECTION_BOOKS)
+                .whereEqualTo("location", location)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<Book> books = new ArrayList<>();
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        Book book = document.toObject(Book.class);
+                        book.setId(document.getId());
+                        books.add(book);
+                    }
+                    listener.onBooksFetched(books);
+                })
+                .addOnFailureListener(listener::onError);
+        } else {
+            db.collection(COLLECTION_BOOKS)
+                .whereEqualTo("location", location)
+                .whereEqualTo("category", category)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<Book> books = new ArrayList<>();
+                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                        Book book = document.toObject(Book.class);
+                        book.setId(document.getId());
+                        books.add(book);
+                    }
+                    listener.onBooksFetched(books);
+                })
+                .addOnFailureListener(listener::onError);
+        }
+    }
+
+    public interface OnBooksFetchedListener {
+        void onBooksFetched(List<Book> books);
+        void onError(Exception e);
     }
 } 

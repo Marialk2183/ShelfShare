@@ -1,7 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ShelfShare</string>
     <string name="rental_period">Rental Period: %d days</string>
     <string name="total_price">Total Price: $%.2f</string>
     <string name="confirm">Confirm</string>
     <string name="cancel">Cancel</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
 </resources>

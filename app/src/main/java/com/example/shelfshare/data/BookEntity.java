@@ -5,12 +5,13 @@ import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 import androidx.room.TypeConverters;
+import java.io.Serializable;
 
 import java.util.Date;
 
 @Entity(tableName = "books")
 @TypeConverters(DateConverter.class)
-public class BookEntity {
+public class BookEntity implements Serializable {
     @PrimaryKey
     @NonNull
     private String id;
@@ -35,6 +36,21 @@ public class BookEntity {
         this.available = true;
         this.isFavorite = false;
         this.quantity = 0;
+        this.createdAt = new Date();
+        this.updatedAt = new Date();
+    }
+
+    @Ignore
+    public BookEntity(String id, String title, String author, String location, double price, boolean available, String imageUrl) {
+        this.id = id;
+        this.title = title;
+        this.author = author;
+        this.location = location;
+        this.price = price;
+        this.available = available;
+        this.imageUrl = imageUrl;
+        this.isFavorite = false;
+        this.quantity = 1;
         this.createdAt = new Date();
         this.updatedAt = new Date();
     }

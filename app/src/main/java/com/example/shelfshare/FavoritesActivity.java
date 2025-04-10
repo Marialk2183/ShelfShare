@@ -2,84 +2,91 @@ package com.example.shelfshare;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.MenuItem;
+import android.view.View;
 import android.widget.Toast;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.shelfshare.adapters.BookAdapter;
-import com.example.shelfshare.models.Book;
+import com.example.shelfshare.databinding.ActivityFavoritesBinding;
+import com.example.shelfshare.data.BookEntity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import com.google.firebase.firestore.DocumentSnapshot;
 
 public class FavoritesActivity extends AppCompatActivity implements BookAdapter.OnBookClickListener {
-    private RecyclerView recyclerView;
+    private ActivityFavoritesBinding binding;
     private BookAdapter adapter;
-    private List<Book> books;
+    private FirebaseFirestore db;
+    private FirebaseAuth auth;
+    private List<BookEntity> favoriteBooks = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_favorites);
+        binding = ActivityFavoritesBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
-        // Setup toolbar
-        androidx.appcompat.widget.Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle("Favorites");
-        }
+        db = FirebaseFirestore.getInstance();
+        auth = FirebaseAuth.getInstance();
 
-        // Initialize RecyclerView
-        recyclerView = findViewById(R.id.recyclerView);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        
-        // Initialize books list and adapter
-        books = new ArrayList<>();
-        adapter = new BookAdapter(books, this);
-        recyclerView.setAdapter(adapter);
-
-        // Load favorites from Firestore
-        loadFavorites();
+        setupRecyclerView();
+        loadFavoriteBooks();
     }
 
-    private void loadFavorites() {
-        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        FirebaseFirestore.getInstance()
-                .collection("users")
-                .document(userId)
-                .collection("favorites")
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    books.clear();
-                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
-                        Book book = document.toObject(Book.class);
-                        books.add(book);
+    private void setupRecyclerView() {
+        adapter = new BookAdapter(favoriteBooks, this);
+        binding.recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        binding.recyclerView.setAdapter(adapter);
+    }
+
+    private void loadFavoriteBooks() {
+        String userId = auth.getCurrentUser().getUid();
+        binding.progressBar.setVisibility(View.VISIBLE);
+
+        db.collection("users").document(userId).collection("favorites")
+            .get()
+            .addOnSuccessListener(queryDocumentSnapshots -> {
+                favoriteBooks.clear();
+                for (DocumentSnapshot document : queryDocumentSnapshots) {
+                    BookEntity book = document.toObject(BookEntity.class);
+                    if (book != null) {
+                        favoriteBooks.add(book);
                     }
-                    adapter.notifyDataSetChanged();
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Error loading favorites: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+                }
+                adapter.updateBooks(favoriteBooks);
+                binding.progressBar.setVisibility(View.GONE);
+                binding.recyclerView.setVisibility(favoriteBooks.isEmpty() ? View.GONE : View.VISIBLE);
+                binding.emptyView.setVisibility(favoriteBooks.isEmpty() ? View.VISIBLE : View.GONE);
+            })
+            .addOnFailureListener(e -> {
+                binding.progressBar.setVisibility(View.GONE);
+                Toast.makeText(this, "Error loading favorites: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
     }
 
     @Override
-    public void onBookClick(Book book) {
-        Intent intent = new Intent(this, BookDetailsActivity.class);
-        intent.putExtra("bookId", book.getId());
+    public void onBookClick(BookEntity book) {
+        Intent intent = new Intent(this, BookDetailActivity.class);
+        intent.putExtra("book", book);
         startActivity(intent);
     }
 
     @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == android.R.id.home) {
-            onBackPressed();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
+    public void onAddToCartClick(BookEntity book) {
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        FirebaseFirestore.getInstance()
+            .collection("users")
+            .document(userId)
+            .collection("cart")
+            .document(book.getId())
+            .set(book)
+            .addOnSuccessListener(aVoid -> 
+                Toast.makeText(this, "Added to cart", Toast.LENGTH_SHORT).show())
+            .addOnFailureListener(e -> 
+                Toast.makeText(this, "Failed to add to cart: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 } 

@@ -60,13 +60,15 @@ public class PaymentActivity extends AppCompatActivity implements RazorpayHelper
     }
 
     private void processRazorpayPayment() {
+        binding.btnProceedToPay.setEnabled(false);
+        binding.btnProceedToPay.setText("Processing...");
+        
         double amount = cartManager.getTotalAmount();
         RazorpayHelper razorpayHelper = new RazorpayHelper(this, amount, orderId, this);
         razorpayHelper.startPayment();
     }
 
     private void processPaytmPayment() {
-        // Implement Paytm payment
         Toast.makeText(this, "Paytm payment not implemented yet", Toast.LENGTH_SHORT).show();
     }
 
@@ -77,6 +79,13 @@ public class PaymentActivity extends AppCompatActivity implements RazorpayHelper
     @Override
     public void onPaymentSuccess(String paymentId) {
         completeOrder(paymentId);
+    }
+
+    @Override
+    public void onPaymentError(int code, String response) {
+        Toast.makeText(this, "Payment failed: " + response, Toast.LENGTH_SHORT).show();
+        binding.btnProceedToPay.setEnabled(true);
+        binding.btnProceedToPay.setText("Proceed to Pay");
     }
 
     @Override
@@ -109,7 +118,14 @@ public class PaymentActivity extends AppCompatActivity implements RazorpayHelper
             })
             .addOnFailureListener(e -> {
                 Toast.makeText(this, "Error placing order: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                binding.btnProceedToPay.setEnabled(true);
+                binding.btnProceedToPay.setText("Proceed to Pay");
             });
+    }
+
+    @Override
+    public void onPointerCaptureChanged(boolean hasCapture) {
+        super.onPointerCaptureChanged(hasCapture);
     }
 
     private static class Order {
