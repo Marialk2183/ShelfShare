@@ -1,3 +1,2 @@
 Feature content
 Updated feature branch
-Updated feature branch
