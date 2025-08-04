@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/homeActivity"
+        android:icon="@drawable/ic_home"
+        android:title="Home" />
+
+    <item
+        android:id="@+id/rentalsActivity"
+        android:icon="@drawable/ic_rent"
+        android:title="Rentals" />
+
+    <item
+        android:id="@+id/favoritesActivity"
+        android:icon="@drawable/ic_favorite"
+        android:title="Favorites" />
+
+    <item
+        android:id="@+id/cartActivity"
+        android:icon="@drawable/ic_shopping_cart"
+        android:title="Cart" />
+
+    <item
+        android:id="@+id/profileActivity"
+        android:icon="@drawable/ic_person"
+        android:title="Profile" />
+</menu> 
